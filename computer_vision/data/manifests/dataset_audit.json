@@ -1,0 +1,1218 @@
+{
+  "TCC-Person-Fall-2024": {
+    "name": "TCC-Person-Fall-2024",
+    "path": "C:\\Users\\bousl\\Desktop\\hackcure_project\\datasets\\TCC-Person-Fall-2024.v6i.yolov8",
+    "annotation_format": "yolov8_segment",
+    "class_names": {
+      "0": "person-fall",
+      "1": "person-in-bed",
+      "2": "person-moving-out",
+      "3": "person-near-fall",
+      "4": "person-out"
+    },
+    "splits": {
+      "train": {
+        "images": 841,
+        "labels": 841,
+        "bboxes": 850,
+        "missing_labels": 0,
+        "missing_images": 0,
+        "empty_labels": 3,
+        "malformed_lines": 0,
+        "class_distribution": {
+          "1": 222,
+          "2": 180,
+          "4": 138,
+          "0": 157,
+          "3": 153
+        },
+        "resolutions": [
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ]
+        ]
+      },
+      "val": {
+        "images": 240,
+        "labels": 240,
+        "bboxes": 244,
+        "missing_labels": 0,
+        "missing_images": 0,
+        "empty_labels": 3,
+        "malformed_lines": 0,
+        "class_distribution": {
+          "1": 55,
+          "2": 41,
+          "0": 55,
+          "3": 45,
+          "4": 48
+        },
+        "resolutions": [
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ]
+        ]
+      },
+      "test": {
+        "images": 120,
+        "labels": 120,
+        "bboxes": 123,
+        "missing_labels": 0,
+        "missing_images": 0,
+        "empty_labels": 0,
+        "malformed_lines": 0,
+        "class_distribution": {
+          "2": 27,
+          "1": 45,
+          "3": 15,
+          "0": 24,
+          "4": 12
+        },
+        "resolutions": [
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ]
+        ]
+      }
+    },
+    "totals": {
+      "images": 1201,
+      "labels": 1201,
+      "bboxes": 1217,
+      "missing_labels": 0,
+      "missing_images": 0,
+      "empty_labels": 6,
+      "malformed_labels": 0
+    },
+    "class_distribution": {
+      "1": 322,
+      "2": 248,
+      "4": 198,
+      "0": 236,
+      "3": 213
+    },
+    "resolutions": {
+      "640x640": 150
+    },
+    "errors": [],
+    "duplicate_images": 0,
+    "duplicate_details": {},
+    "class_imbalance_ratio": 1.63
+  },
+  "Human-Fall-Dataset-v2": {
+    "name": "Human-Fall-Dataset-v2",
+    "path": "C:\\Users\\bousl\\Desktop\\hackcure_project\\datasets\\Human Fall.v2i.yolov8",
+    "annotation_format": "yolov8_detect",
+    "class_names": {
+      "0": "Human Falling",
+      "1": "nopain",
+      "2": "sitting"
+    },
+    "splits": {
+      "train": {
+        "images": 582,
+        "labels": 582,
+        "bboxes": 603,
+        "missing_labels": 0,
+        "missing_images": 0,
+        "empty_labels": 0,
+        "malformed_lines": 0,
+        "class_distribution": {
+          "0": 576,
+          "1": 21,
+          "2": 6
+        },
+        "resolutions": [
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ]
+        ]
+      },
+      "val": {
+        "images": 27,
+        "labels": 27,
+        "bboxes": 28,
+        "missing_labels": 0,
+        "missing_images": 0,
+        "empty_labels": 0,
+        "malformed_lines": 0,
+        "class_distribution": {
+          "0": 25,
+          "1": 2,
+          "2": 1
+        },
+        "resolutions": [
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ]
+        ]
+      },
+      "test": {
+        "images": 9,
+        "labels": 9,
+        "bboxes": 10,
+        "missing_labels": 0,
+        "missing_images": 0,
+        "empty_labels": 0,
+        "malformed_lines": 0,
+        "class_distribution": {
+          "1": 3,
+          "0": 7
+        },
+        "resolutions": [
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ],
+          [
+            640,
+            640
+          ]
+        ]
+      }
+    },
+    "totals": {
+      "images": 618,
+      "labels": 618,
+      "bboxes": 641,
+      "missing_labels": 0,
+      "missing_images": 0,
+      "empty_labels": 0,
+      "malformed_labels": 0
+    },
+    "class_distribution": {
+      "0": 608,
+      "1": 26,
+      "2": 7
+    },
+    "resolutions": {
+      "640x640": 86
+    },
+    "errors": [],
+    "duplicate_images": 0,
+    "duplicate_details": {},
+    "class_imbalance_ratio": 86.86
+  },
+  "GMDCSA-24": {
+    "name": "GMDCSA-24",
+    "path": "C:\\Users\\bousl\\Desktop\\hackcure_project\\datasets\\GMDCSA24-A-Dataset-for-Human-Fall-Detection-in-Videos-v2.1\\ekramalam-GMDCSA24-A-Dataset-for-Human-Fall-Detection-in-Videos-5abac76",
+    "annotation_format": "video_csv",
+    "type": "video_temporal",
+    "subjects": {
+      "Subject 1": {
+        "adl_videos": 16,
+        "fall_videos": 16,
+        "classes": [
+          "Falling (BW)",
+          "Falling (FW)",
+          "Falling (SW)",
+          "Reading",
+          "Sitting",
+          "Sleeping",
+          "Standing",
+          "Walking"
+        ]
+      },
+      "Subject 2": {
+        "adl_videos": 23,
+        "fall_videos": 25,
+        "classes": [
+          "Drinking",
+          "Eating",
+          "Exercising",
+          "Falling (BW",
+          "Falling (BW)",
+          "Falling (FW)",
+          "Falling (SW)",
+          "Reading",
+          "Sitting",
+          "Sleeping",
+          "Standing",
+          "Walking",
+          "Writing"
+        ]
+      },
+      "Subject 3": {
+        "adl_videos": 22,
+        "fall_videos": 21,
+        "classes": [
+          "Drinking",
+          "Eating",
+          "Exercising",
+          "Fall (FW)",
+          "Falling (BW)",
+          "Falling (FW)",
+          "Falling (SW)",
+          "Reading",
+          "Sitting",
+          "Sleeping",
+          "Standing",
+          "Walking",
+          "Writing"
+        ]
+      },
+      "Subject 4": {
+        "adl_videos": 20,
+        "fall_videos": 17,
+        "classes": [
+          "Drinking",
+          "Eating",
+          "Exercising",
+          "Falling (BW)",
+          "Falling (FW)",
+          "Falling (SW)",
+          "Reading",
+          "Sitting",
+          "Sleeping",
+          "Standing",
+          "Walking",
+          "Writing"
+        ]
+      }
+    },
+    "totals": {
+      "videos": 160,
+      "adl_videos": 81,
+      "fall_videos": 79,
+      "total_subjects": 4
+    },
+    "temporal_classes": [
+      "Drinking",
+      "Eating",
+      "Exercising",
+      "Fall (FW)",
+      "Falling (BW",
+      "Falling (BW)",
+      "Falling (FW)",
+      "Falling (SW)",
+      "Reading",
+      "Sitting",
+      "Sleeping",
+      "Standing",
+      "Walking",
+      "Writing"
+    ],
+    "note": "Video-only dataset with temporal CSV annotations. No YOLO bounding-box labels available. Not directly usable for YOLO training without manual annotation."
+  }
+}

@@ -1,0 +1,63 @@
+# =============================================================================
+# Temporal Analysis Configuration
+# Thresholds for movement analysis and fall detection
+# =============================================================================
+
+tracking:
+  tracker: "bytetrack"
+  # ByteTrack config file (Ultralytics built-in)
+  tracker_config: "bytetrack.yaml"
+  # Persist IDs across frames
+  persist: true
+
+movement:
+  # Velocity thresholds (pixels per frame, normalized by image diagonal)
+  stationary_threshold: 0.005    # Below this = stationary
+  slow_threshold: 0.02           # Below this = slow movement
+  walking_threshold: 0.06        # Below this = walking
+  # Above walking_threshold = rapid_motion
+
+  # Rapid downward motion detection
+  downward_ratio_threshold: 0.6  # Vertical component ratio for "downward"
+  rapid_downward_velocity: 0.04  # Minimum velocity for rapid downward
+
+  # Smoothing
+  history_length: 30             # Number of frames to keep in history
+  velocity_smoothing_window: 5   # Frames to average velocity over
+
+fall_detection:
+  # Minimum frames in fallen state to confirm fall
+  min_fallen_frames: 5
+
+  # Minimum confidence from YOLO for fallen class
+  min_fallen_confidence: 0.35
+
+  # Time window (frames) to evaluate state transition
+  transition_window: 15
+
+  # Post-fall stillness check
+  post_fall_stationary_frames: 8
+  post_fall_max_velocity: 0.01
+
+  # Confidence boost factors
+  rapid_downward_boost: 0.15
+  state_transition_boost: 0.10
+  persistence_boost: 0.10
+
+  # Minimum overall confidence to trigger fall event
+  min_fall_event_confidence: 0.50
+
+  # Detection delay tolerance (frames)
+  max_acceptable_delay_frames: 30
+
+spatial:
+  # Image coordinate normalization
+  normalize: true
+
+discomfort:
+  # IoU threshold for associating face detection with patient bbox
+  association_iou_threshold: 0.1
+  # Distance threshold (normalized) for nearest-patient association
+  max_association_distance: 0.3
+  # Minimum confidence for discomfort detection
+  min_confidence: 0.30

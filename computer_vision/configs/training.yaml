@@ -1,0 +1,72 @@
+# =============================================================================
+# YOLOv8n Training Configuration
+# Target hardware: Windows, NVIDIA RTX 4060, 8 GB VRAM
+# =============================================================================
+
+model:
+  weights: "yolov8n.pt"
+  task: "detect"
+
+training:
+  epochs: 120
+  imgsz: 640
+  batch: 16
+  device: 0
+  patience: 25
+  seed: 42
+  amp: true
+  workers: 8
+  close_mosaic: 10
+  exist_ok: false
+
+  # Optimizer
+  optimizer: "AdamW"
+  lr0: 0.001
+  lrf: 0.01
+  weight_decay: 0.0005
+  warmup_epochs: 3
+
+  # VRAM fallback: if OOM at batch=16, retry 8, then 4
+  batch_fallback:
+    - 16
+    - 8
+    - 4
+
+# =============================================================================
+# Augmentation
+# Realistic for indoor hospital-room scenes
+# =============================================================================
+augmentation:
+  hsv_h: 0.015
+  hsv_s: 0.50
+  hsv_v: 0.30
+
+  degrees: 5.0
+  translate: 0.10
+  scale: 0.50
+  shear: 2.0
+  perspective: 0.0005
+
+  fliplr: 0.5
+  flipud: 0.0  # No vertical flip - preserves standing/lying semantics
+
+  mosaic: 0.7
+  mixup: 0.05
+
+  close_mosaic: 10
+
+# =============================================================================
+# Output
+# =============================================================================
+output:
+  project: "runs/patient_yolov8n"
+  name: "baseline"
+
+# =============================================================================
+# Smoke test
+# =============================================================================
+smoke_test:
+  epochs: 1
+  batch: 4
+  imgsz: 640
+  device: 0

@@ -1,0 +1,24 @@
+# Computer Vision Module - Patient Monitoring
+# YOLOv8n-based detection, tracking, and temporal analysis
+
+# Core
+ultralytics>=8.0.0
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Computer Vision
+opencv-python>=4.8.0
+
+# Data Processing
+numpy>=1.24.0
+pandas>=2.0.0
+pyyaml>=6.0
+
+# Visualization
+matplotlib>=3.7.0
+
+# Testing
+pytest>=7.0.0
+
+# Utilities
+tqdm>=4.65.0

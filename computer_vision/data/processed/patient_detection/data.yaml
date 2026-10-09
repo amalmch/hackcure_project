@@ -1,0 +1,8 @@
+path: C:\Users\bousl\Desktop\hackcure_project\computer_vision\data\processed\patient_detection
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: falling
+  1: no_falling
+nc: 2

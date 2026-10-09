@@ -1,0 +1,147 @@
+# =============================================================================
+# Dataset Configuration
+# All dataset paths are relative to the project root (hackcure_project/)
+# =============================================================================
+
+project_root: ".."  # Relative to computer_vision/ directory
+
+datasets:
+  tcc_person_fall:
+    name: "TCC-Person-Fall-2024"
+    path: "datasets/TCC-Person-Fall-2024.v6i.yolov8"
+    format: "yolov8_segment"  # polygon/segmentation annotations
+    has_splits: true
+    splits:
+      train: "train"
+      val: "valid"
+      test: "test"
+    original_classes:
+      0: "person-fall"
+      1: "person-in-bed"
+      2: "person-moving-out"
+      3: "person-near-fall"
+      4: "person-out"
+    num_classes: 5
+
+  human_fall_v2:
+    name: "Human-Fall-Dataset-v2"
+    path: "datasets/Human Fall.v2i.yolov8"
+    format: "yolov8_detect"  # standard bbox annotations
+    has_splits: true
+    splits:
+      train: "train"
+      val: "valid"
+      test: "test"
+    original_classes:
+      0: "Human Falling"
+      1: "nopain"
+      2: "sitting"
+    num_classes: 3
+
+  gmdcsa24:
+    name: "GMDCSA-24"
+    path: "datasets/GMDCSA24-A-Dataset-for-Human-Fall-Detection-in-Videos-v2.1/ekramalam-GMDCSA24-A-Dataset-for-Human-Fall-Detection-in-Videos-5abac76"
+    format: "video_csv"  # video files with CSV temporal annotations
+    has_splits: false
+    subjects:
+      - "Subject 1"
+      - "Subject 2"
+      - "Subject 3"
+      - "Subject 4"
+    categories:
+      - "ADL"
+      - "Fall"
+    annotation_type: "temporal_csv"
+    note: "Video-only dataset. No YOLO bounding-box annotations. Used for temporal validation and frame extraction."
+
+# =============================================================================
+# Canonical Class Mapping
+# =============================================================================
+canonical_classes:
+  0: "patient_fallen"
+  1: "patient_lying"
+  2: "patient_moving_out"
+  3: "patient_near_fall"
+  4: "patient_out"
+  5: "patient_sitting"
+  6: "possible_discomfort"
+
+# Mapping from source datasets to canonical classes
+# Actions: KEEP (direct use), REMAP (change class), EXCLUDE (do not use)
+class_mapping:
+  tcc_person_fall:
+    - source_class: "person-fall"
+      source_class_id: 0
+      canonical_class: "patient_fallen"
+      canonical_class_id: 0
+      action: "REMAP"
+      reason: "Fall state maps directly to patient_fallen"
+
+    - source_class: "person-in-bed"
+      source_class_id: 1
+      canonical_class: "patient_lying"
+      canonical_class_id: 1
+      action: "REMAP"
+      reason: "Person in bed consistently represents lying/recumbent posture in hospital context"
+
+    - source_class: "person-moving-out"
+      source_class_id: 2
+      canonical_class: "patient_moving_out"
+      canonical_class_id: 2
+      action: "REMAP"
+      reason: "Moving out of monitored area maps directly"
+
+    - source_class: "person-near-fall"
+      source_class_id: 3
+      canonical_class: "patient_near_fall"
+      canonical_class_id: 3
+      action: "REMAP"
+      reason: "Near-fall state maps directly"
+
+    - source_class: "person-out"
+      source_class_id: 4
+      canonical_class: "patient_out"
+      canonical_class_id: 4
+      action: "REMAP"
+      reason: "Out of area maps directly"
+
+  human_fall_v2:
+    - source_class: "Human Falling"
+      source_class_id: 0
+      canonical_class: "patient_fallen"
+      canonical_class_id: 0
+      action: "REMAP"
+      reason: "Human falling maps to patient_fallen"
+
+    - source_class: "nopain"
+      source_class_id: 1
+      canonical_class: null
+      canonical_class_id: null
+      action: "EXCLUDE"
+      reason: "nopain is absence of discomfort - not a meaningful detection class for YOLO. Including it would create ambiguity since any person without pain would match."
+
+    - source_class: "sitting"
+      source_class_id: 2
+      canonical_class: "patient_sitting"
+      canonical_class_id: 5
+      action: "REMAP"
+      reason: "Sitting posture maps directly"
+
+  gmdcsa24:
+    - source_class: "all"
+      source_class_id: null
+      canonical_class: null
+      canonical_class_id: null
+      action: "EXCLUDE"
+      reason: "Video-only dataset with temporal CSV annotations. No YOLO bounding-box labels. Used for temporal analysis validation only."
+
+# =============================================================================
+# Data split configuration
+# =============================================================================
+split_config:
+  seed: 42
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  # For video-derived frames, split at video/recording level
+  video_level_split: true

@@ -1,0 +1,319 @@
+# Patient Monitoring - Computer Vision Module (YOLOv8n)
+
+Intelligent hospital patient monitoring using YOLOv8n object detection with temporal tracking, fall detection, and discomfort analysis.
+
+## Architecture
+
+```
+computer_vision/
+├── configs/           # All configuration (datasets, training, temporal)
+├── data/
+│   ├── processed/     # Unified YOLO dataset
+│   └── manifests/     # Audit & build manifests
+├── src/
+│   ├── datasets/      # Audit, harmonize, build pipeline
+│   ├── detection/     # YOLOv8n patient detector
+│   ├── tracking/      # ByteTrack patient tracker
+│   ├── temporal/      # Movement analyzer + fall detector
+│   ├── face/          # Discomfort association
+│   ├── spatial/       # Position computation
+│   ├── evaluation/    # Metrics + error analysis
+│   ├── visualization.py
+│   └── inference.py   # Unified pipeline
+├── scripts/           # CLI entry points
+├── tests/             # Unit tests
+├── runs/              # Training experiments
+├── models/            # Exported models
+└── reports/           # Audit & evaluation reports
+```
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+cd computer_vision
+pip install -r requirements.txt
+```
+
+### 2. Full Pipeline (in order)
+
+```bash
+# Step 1: Audit all three datasets
+python scripts/audit_datasets.py
+
+# Step 2: Visualize source annotations
+python scripts/visualize_annotations.py
+
+# Step 3: Build unified YOLO dataset
+python scripts/build_dataset.py
+
+# Step 4: Validate processed labels
+python scripts/validate_yolo_dataset.py
+
+# Step 5: Smoke test (1 epoch)
+python scripts/smoke_test.py
+
+# Step 6: Full training (120 epochs)
+python scripts/train_patient_yolo.py
+
+# Step 7: Evaluate
+python scripts/evaluate.py
+
+# Step 8: Benchmark speed
+python scripts/benchmark.py
+
+# Step 9: Run inference
+python scripts/run_inference.py --source path/to/video.mp4
+
+# Step 10: Export model
+python scripts/export_model.py
+```
+
+## Datasets
+
+Three local datasets are used (paths configured in `configs/datasets.yaml`):
+
+| Dataset | Format | Classes | Images |
+|---------|--------|---------|--------|
+| TCC-Person-Fall-2024 | YOLO segmentation polygons | person-fall, person-in-bed, person-moving-out, person-near-fall, person-out | ~1200 |
+| Human Fall Dataset v2 | YOLO detection bboxes | Human Falling, nopain, sitting | ~618 |
+| GMDCSA-24 | Video + CSV temporal | Falling, Sitting, Walking, Standing, Sleeping, Reading | 128 videos |
+
+### Dataset Audit
+
+```bash
+python scripts/audit_datasets.py
+```
+
+Generates:
+- `reports/dataset_audit.md` — Human-readable report
+- `data/manifests/dataset_audit.json` — Machine-readable audit
+
+### Class Mapping
+
+| Source Dataset | Source Class | → Canonical Class | Action |
+|---------------|-------------|-------------------|--------|
+| TCC | person-fall | patient_fallen | REMAP |
+| TCC | person-in-bed | patient_lying | REMAP |
+| TCC | person-moving-out | patient_moving_out | REMAP |
+| TCC | person-near-fall | patient_near_fall | REMAP |
+| TCC | person-out | patient_out | REMAP |
+| Human Fall v2 | Human Falling | patient_fallen | REMAP |
+| Human Fall v2 | nopain | — | EXCLUDE (absence class, not a meaningful detection target) |
+| Human Fall v2 | sitting | patient_sitting | REMAP |
+| GMDCSA-24 | all | — | EXCLUDE (video-only, no YOLO bbox annotations) |
+
+### Dataset Merging
+
+```bash
+python scripts/build_dataset.py
+```
+
+- Converts TCC segmentation polygons → detection bounding boxes
+- Remaps class IDs to the canonical ontology
+- Excludes incompatible annotations (nopain, GMDCSA-24)
+- Preserves original train/val/test splits
+- Generates `data/processed/patient_detection/data.yaml`
+- Generates `data/manifests/patient_detection_manifest.csv`
+
+### Data Leakage Prevention
+
+- Frames from the same video/recording stay in the same split
+- Video-group extraction from Roboflow filenames
+- Leakage warnings logged if overlap detected
+
+## Training
+
+### Configuration
+
+All hyperparameters in `configs/training.yaml`:
+
+| Parameter | Value |
+|-----------|-------|
+| Model | YOLOv8n (from yolov8n.pt) |
+| Epochs | 120 |
+| Image Size | 640 |
+| Batch | 16 (fallback: 8, 4) |
+| Optimizer | AdamW |
+| LR | 0.001 → 0.01 (cosine) |
+| Patience | 25 |
+| Seed | 42 |
+
+### Smoke Test
+
+```bash
+python scripts/smoke_test.py
+```
+
+Verifies: dataset loads, GPU works, forward/backward pass, validation pass.
+
+### Full Training
+
+```bash
+python scripts/train_patient_yolo.py
+```
+
+Options:
+```bash
+python scripts/train_patient_yolo.py --experiment exp_02
+python scripts/train_patient_yolo.py --batch -1    # AutoBatch
+python scripts/train_patient_yolo.py --epochs 200
+```
+
+Automatic OOM fallback: batch 16 → 8 → 4.
+
+## Evaluation
+
+```bash
+python scripts/evaluate.py
+python scripts/evaluate.py --split test
+python scripts/evaluate.py --model path/to/best.pt
+```
+
+Reports:
+- Overall: precision, recall, F1, mAP@50, mAP@50-95
+- Per-class: precision, recall, F1, AP@50, AP@50-95
+- Confusion matrix & PR curves (generated by Ultralytics)
+- `reports/evaluation_report.md`
+
+### Fall-Specific Metrics
+
+Frame-level and event-level metrics computed when temporal ground truth is available:
+- Fall recall/sensitivity
+- Fall precision
+- False positives / false negatives
+- Detection delay
+
+## Tracking
+
+Uses **ByteTrack** via the Ultralytics tracking API:
+
+- Persistent patient IDs across frames
+- Center history for trajectory visualization
+- State history for temporal analysis
+
+## Movement Analysis
+
+Per-patient temporal analysis (`configs/temporal.yaml`):
+
+| State | Threshold |
+|-------|-----------|
+| Stationary | velocity < 0.005 |
+| Slow | velocity < 0.02 |
+| Walking | velocity < 0.06 |
+| Rapid motion | velocity ≥ 0.06 |
+| Rapid downward | velocity ≥ 0.04 + downward ratio > 0.6 |
+
+## Fall Detection
+
+Multi-frame temporal fall detection (NOT single-frame):
+
+```
+standing → inclined → rapid downward → fallen → stationary
+```
+
+Confidence boosted by:
+- State transition from upright (+0.10)
+- Rapid downward movement (+0.15)
+- Post-fall stillness (+0.10)
+- Persistent fallen state (+0.10)
+
+Minimum 5 consecutive frames in fallen state required.
+
+## Discomfort Detection
+
+The `nopain` class from Human Fall v2 is **excluded** because:
+- It represents absence of discomfort (not a detection target)
+- Including it would create ambiguity
+
+If `possible_discomfort` annotations with valid bounding boxes exist, they are incorporated. Face/discomfort detections are spatially associated with the nearest patient track.
+
+## Inference
+
+```bash
+# Video
+python scripts/run_inference.py --source video.mp4
+
+# Webcam
+python scripts/run_inference.py --source 0
+
+# Image
+python scripts/run_inference.py --source image.jpg
+
+# Folder
+python scripts/run_inference.py --source path/to/images/
+
+# Save outputs
+python scripts/run_inference.py --source video.mp4 --save-video --save-json
+```
+
+### Structured Output Format
+
+```json
+{
+    "patient_id": 1,
+    "timestamp": 1.234,
+    "bbox": [100.0, 200.0, 300.0, 400.0],
+    "state": "patient_fallen",
+    "confidence": 0.94,
+    "position": {
+        "x_center": 0.52,
+        "y_center": 0.71,
+        "bottom_x": 0.52,
+        "bottom_y": 0.91
+    },
+    "movement": {
+        "state": "stationary",
+        "velocity": 0.03
+    },
+    "fall_event": {
+        "detected": true,
+        "confidence": 0.94
+    },
+    "possible_discomfort": {
+        "detected": false,
+        "confidence": 0.0
+    }
+}
+```
+
+## Benchmarking
+
+```bash
+python scripts/benchmark.py
+python scripts/benchmark.py --imgsz 512 640
+```
+
+Measures FPS, latency (mean/median/p95/p99), preprocess/inference/postprocess breakdown.
+
+## Export
+
+```bash
+python scripts/export_model.py
+python scripts/export_model.py --format onnx
+python scripts/export_model.py --format torchscript
+```
+
+Preserves the original PyTorch `best.pt` unchanged.
+
+## Testing
+
+```bash
+cd computer_vision
+pytest tests/ -v
+```
+
+## Hardware
+
+Development target:
+- Windows
+- NVIDIA RTX 4060 (8 GB VRAM)
+- Python 3.10+
+
+## Notes
+
+- **No clinical validation**: This is a research/engineering prototype. Fall and discomfort detections are not clinically validated.
+- **Original data preserved**: No source files are modified, renamed, or deleted.
+- **Modular design**: Each component can be used independently or integrated into the larger monitoring system.
+- **GMDCSA-24 usage**: Video dataset is available for temporal validation but excluded from YOLO training due to lack of bounding-box annotations.

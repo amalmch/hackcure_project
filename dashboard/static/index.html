@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HackCure — AI Patient Monitoring</title>
+    <meta name="description" content="Privacy-preserving AI patient monitoring with 3D digital twin simulation">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <!-- ═══ Top Bar ═══ -->
+    <header id="top-bar">
+        <div class="top-bar-left">
+            <div class="logo">
+                <span class="logo-icon">🏥</span>
+                <h1>HackCure</h1>
+                <span class="logo-subtitle">AI Patient Monitoring</span>
+            </div>
+        </div>
+        <div class="top-bar-center">
+            <div id="mode-selector">
+                <button id="btn-mode-demo" class="mode-btn active" data-mode="demo">
+                    <span class="mode-icon">🎬</span> Demo Mode
+                </button>
+                <button id="btn-mode-real" class="mode-btn" data-mode="real">
+                    <span class="mode-icon">📡</span> Real Monitoring
+                </button>
+            </div>
+        </div>
+        <div class="top-bar-right">
+            <div id="connection-status" class="status-disconnected">
+                <span class="status-dot"></span>
+                <span class="status-text">Disconnected</span>
+            </div>
+            <div id="clock"></div>
+        </div>
+    </header>
+
+    <!-- ═══ Main Content ═══ -->
+    <main id="app-container">
+        <!-- Left Sidebar: Patient Cards -->
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <h2>Patients</h2>
+                <span id="patient-count" class="badge">0</span>
+            </div>
+            <div id="patient-cards-container">
+                <!-- Dynamically filled -->
+            </div>
+
+            <!-- Demo Controls (only visible in demo mode) -->
+            <div id="demo-controls" class="demo-panel">
+                <h3>
+                    <span class="demo-badge">SIMULATION</span>
+                    Demo Controls
+                </h3>
+                <div id="demo-patient-select">
+                    <label>Target Patient:</label>
+                    <select id="demo-target-patient">
+                        <!-- Dynamically filled -->
+                    </select>
+                </div>
+                <div class="demo-buttons">
+                    <button class="demo-btn demo-btn-fall" data-event="fall">
+                        ⚠️ Trigger Fall
+                    </button>
+                    <button class="demo-btn demo-btn-pain" data-event="pain">
+                        😣 Trigger Pain
+                    </button>
+                    <button class="demo-btn demo-btn-both" data-event="fall_and_pain">
+                        🚨 Fall + Pain
+                    </button>
+                    <button class="demo-btn demo-btn-recover" data-event="recover">
+                        ✅ Recovery
+                    </button>
+                </div>
+                <div class="demo-actions">
+                    <button id="btn-auto-demo" class="demo-btn demo-btn-auto">
+                        ▶️ Auto Sequence
+                    </button>
+                    <button id="btn-reset-all" class="demo-btn demo-btn-reset">
+                        🔄 Reset All
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center: 3D Viewport -->
+        <section id="viewport-container">
+            <!-- Alert Banner -->
+            <div id="alert-banner" class="alert-hidden">
+                <div class="alert-content">
+                    <span class="alert-icon">🚨</span>
+                    <span id="alert-text">ALERT</span>
+                    <button id="alert-dismiss" class="alert-close">✕</button>
+                </div>
+            </div>
+
+            <!-- Mode Indicator -->
+            <div id="mode-indicator">
+                <span id="mode-label">DEMO MODE</span>
+            </div>
+
+            <!-- Three.js Canvas -->
+            <div id="three-container"></div>
+            
+            <!-- CCTV Filter Overlay -->
+            <div id="cctv-overlay" class="cctv-hidden">
+                <div class="cctv-scanlines"></div>
+                <div class="cctv-static"></div>
+                <div class="cctv-ui">
+                    <div class="cctv-header">
+                        <span class="cctv-rec"><span class="rec-dot"></span> REC</span>
+                        <span class="cctv-cam">CAM <span id="cctv-cam-id">01</span></span>
+                    </div>
+                    <div class="cctv-footer">
+                        <span class="cctv-date" id="cctv-date">2026/10/09</span>
+                        <span class="cctv-time" id="cctv-time">16:00:00</span>
+                    </div>
+                    <div class="cctv-crosshair">
+                        <div class="cross-h"></div>
+                        <div class="cross-v"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Camera Controls -->
+            <div id="camera-controls">
+                <button id="btn-overview" class="cam-btn" title="Overview">🏠</button>
+                <button id="btn-topdown" class="cam-btn" title="Top Down">⬇️</button>
+            </div>
+        </section>
+
+        <!-- Right Panel: Event History -->
+        <aside id="event-panel">
+            <div class="panel-header">
+                <h2>Event Log</h2>
+                <span id="event-count" class="badge">0</span>
+            </div>
+            <div id="event-list">
+                <div class="event-empty">No events yet</div>
+            </div>
+
+            <!-- Selected Patient Detail -->
+            <div id="patient-detail" class="detail-hidden">
+                <h3>Patient Detail</h3>
+                <div id="detail-content"></div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Scripts -->
+    <script src="/static/js/patient-state.js"></script>
+    <script src="/static/js/scene.js"></script>
+    <script src="/static/js/avatars.js"></script>
+    <script src="/static/js/dashboard-ui.js"></script>
+    <script src="/static/js/demo-controller.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
