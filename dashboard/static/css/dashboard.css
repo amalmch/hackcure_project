@@ -23,6 +23,7 @@
     --status-warning: #f59e0b;
     --status-critical: #ef4444;
     --status-pain: #f97316;
+    --status-machine-error: #ff6b35;
     --status-info: #3b82f6;
 
     --border-subtle: rgba(148, 163, 184, 0.12);
@@ -280,10 +281,20 @@ html, body {
 .patient-card.status-fall::before { background: var(--status-critical); }
 .patient-card.status-pain::before { background: var(--status-pain); }
 .patient-card.status-fall-pain::before { background: var(--status-critical); }
+.patient-card.status-machine-error::before { background: var(--status-machine-error); }
 
 .patient-card.status-fall,
 .patient-card.status-fall-pain {
     animation: card-pulse-red 1.5s ease-in-out infinite;
+}
+
+.patient-card.status-machine-error {
+    animation: card-pulse-orange 1.5s ease-in-out infinite;
+}
+
+@keyframes card-pulse-orange {
+    0%, 100% { box-shadow: none; }
+    50% { box-shadow: 0 0 20px rgba(255, 107, 53, 0.3); }
 }
 
 @keyframes card-pulse-red {
@@ -342,6 +353,11 @@ html, body {
 .status-badge.fall-pain {
     background: rgba(239, 68, 68, 0.2);
     color: var(--status-critical);
+}
+
+.status-badge.machine-error {
+    background: rgba(255, 107, 53, 0.15);
+    color: var(--status-machine-error);
 }
 
 .card-meta {
@@ -429,6 +445,7 @@ html, body {
 .demo-btn-fall:hover { border-color: var(--status-critical); background: rgba(239, 68, 68, 0.1); }
 .demo-btn-pain:hover { border-color: var(--status-pain); background: rgba(249, 115, 22, 0.1); }
 .demo-btn-both:hover { border-color: var(--status-critical); background: rgba(239, 68, 68, 0.15); }
+.demo-btn-machine:hover { border-color: var(--status-machine-error); background: rgba(255, 107, 53, 0.1); }
 .demo-btn-recover:hover { border-color: var(--status-normal); background: rgba(34, 197, 94, 0.1); }
 .demo-btn-auto:hover { border-color: var(--accent-cyan); background: rgba(6, 182, 212, 0.1); }
 .demo-btn-reset:hover { border-color: var(--text-muted); background: rgba(100, 116, 139, 0.1); }
@@ -489,6 +506,10 @@ html, body {
 @keyframes alert-flash {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.85; }
+}
+
+#alert-banner.alert-machine-error .alert-content {
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.95), rgba(204, 55, 0, 0.95));
 }
 
 .alert-icon { font-size: 20px; }
@@ -602,6 +623,7 @@ html, body {
 .event-item.event-pain { border-left-color: var(--status-pain); }
 .event-item.event-fall-pain { border-left-color: var(--status-critical); }
 .event-item.event-recover { border-left-color: var(--status-normal); }
+.event-item.event-machine-error { border-left-color: var(--status-machine-error); }
 
 .event-header {
     display: flex;
@@ -621,6 +643,7 @@ html, body {
 .event-pain .event-type { color: var(--status-pain); }
 .event-fall-pain .event-type { color: var(--status-critical); }
 .event-recover .event-type { color: var(--status-normal); }
+.event-machine-error .event-type { color: var(--status-machine-error); }
 
 .event-time {
     font-size: 10px;

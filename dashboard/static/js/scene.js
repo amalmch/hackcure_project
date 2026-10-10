@@ -222,6 +222,14 @@ const HospitalScene = (() => {
         g.fillStyle = '#22ff7a'; g.font = 'bold 32px sans-serif'; g.fillText(String(Math.round(m.hr)), 180, 46);
         g.fillStyle = '#38bdf8'; g.font = 'bold 24px sans-serif'; g.fillText(Math.round(m.spo2) + '%', 180, 82);
         g.fillStyle = '#e2e8f0'; g.font = 'bold 15px sans-serif'; g.fillText(m.bp, 180, 112);
+        // Machine error warning strip
+        if (m.machineError) {
+            const flash = Math.sin(t * 6) > 0;
+            g.fillStyle = flash ? '#ff4500' : '#cc3700'; g.fillRect(0, 113, W, 15);
+            g.fillStyle = '#fff'; g.font = 'bold 10px sans-serif'; g.textAlign = 'center';
+            g.fillText('\u26a0 MACHINE FAILURE: ' + (m.machineType || 'UNKNOWN'), W / 2, 121);
+            g.textAlign = 'left';
+        }
     }
     function screenMesh(w, h, m, x, y, z, parent) {
         const s = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: m.tex }));
@@ -234,12 +242,15 @@ const HospitalScene = (() => {
         const vit = {
             normal: [72, 98, '120/80'], pain_detected: [112, 95, '146/92'],
             fall_detected: [124, 93, '98/60'], fall_and_pain: [136, 90, '88/52'],
+            machine_error: [72, 98, '120/80'],
         };
         monitors.forEach(m => {
             const p = list.find(q => q.room === m.room);
             const v = vit[(p && p.state) || 'normal'] || vit.normal;
             m.targetHr = v[0]; m.spo2 = v[1]; m.bp = v[2];
             m.alarm = !!p && p.state !== 'normal' && p.state !== undefined;
+            m.machineError = !!p && p.machine_error;
+            m.machineType = (p && p.machine_type) || '';
         });
     }
 

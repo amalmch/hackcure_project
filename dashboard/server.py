@@ -137,12 +137,13 @@ current_mode = {"mode": "demo"}  # "demo" or "real"
 # ─── Pydantic Models ──────────────────────────────────────
 class DemoEvent(BaseModel):
     patient_id: str
-    event_type: str  # "fall", "pain", "fall_and_pain", "recover", or "behavioral_risk"
+    event_type: str  # "fall", "pain", "fall_and_pain", "recover", "behavioral_risk", "machine_error"
     confidence: float = 0.90
     risk_level: str = "none" # none, low, moderate, high, critical
     risk_score: float = 0.0
     behavior_indicators: list[str] = []
     recommendations: list[str] = []
+    machine_type: str = "" # e.g., "IV Pump", "ECG Monitor"
     
 class ModeSwitch(BaseModel):
     mode: str  # "demo" or "real"
@@ -157,7 +158,8 @@ async def process_event(
     risk_level: str = "none",
     risk_score: float = 0.0,
     behavior_indicators: list = None,
-    recommendations: list = None
+    recommendations: list = None,
+    machine_type: str = ""
 ):
     """Update patient state and broadcast to all clients."""
     if patient_id not in patients:
@@ -196,12 +198,20 @@ async def process_event(
     elif event_type == "recover":
         patient["fall_detected"] = False
         patient["pain_detected"] = False
+        patient["machine_error"] = False
+        patient["machine_type"] = ""
         patient["state"] = "normal"
         patient["alert_priority"] = "none"
         risk_level = "none"
         risk_score = 0.0
         behavior_indicators = []
         recommendations = []
+    elif event_type == "machine_error":
+        patient["machine_error"] = True
+        patient["machine_type"] = machine_type
+        patient["state"] = "machine_error"
+        patient["alert_priority"] = "high"
+        risk_level = "high" if risk_level == "none" else risk_level
     else:
         logger.warning(f"Unknown event type: {event_type}")
         return
@@ -231,6 +241,8 @@ async def process_event(
         "risk_score": risk_score,
         "behavior_indicators": behavior_indicators,
         "recommendations": recommendations,
+        "machine_error": patient.get("machine_error", False),
+        "machine_type": patient.get("machine_type", ""),
         "timestamp": now,
     }
 
@@ -302,7 +314,8 @@ async def trigger_demo_event(event: DemoEvent):
         risk_level=event.risk_level,
         risk_score=event.risk_score,
         behavior_indicators=event.behavior_indicators,
-        recommendations=event.recommendations
+        recommendations=event.recommendations,
+        machine_type=event.machine_type
     )
     return JSONResponse(content={"status": "ok", "event": event.event_type})
 
@@ -346,7 +359,8 @@ async def receive_yolo_event(event: DemoEvent):
         risk_level=event.risk_level,
         risk_score=event.risk_score,
         behavior_indicators=event.behavior_indicators,
-        recommendations=event.recommendations
+        recommendations=event.recommendations,
+        machine_type=event.machine_type
     )
     return JSONResponse(content={"status": "ok"})
 
@@ -370,3 +384,9 @@ async def startup():
     logger.info("Dashboard: http://localhost:8000")
     logger.info("WebSocket: ws://localhost:8000/ws")
     logger.info("=" * 60)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+

@@ -54,16 +54,27 @@ const DemoController = (() => {
         document.getElementById('btn-reset-all')?.addEventListener('click', resetAll);
     }
 
-    async function triggerDemoEvent(patientId, eventType, confidence = 0.92) {
+    async function triggerDemoEvent(patientId, eventType, confidence = 0.92, machineType = '') {
+        const payload = {
+            patient_id: patientId,
+            event_type: eventType,
+            confidence: confidence,
+        };
+
+        // Attach machine_type for machine_error events
+        if (eventType === 'machine_error') {
+            payload.machine_type = machineType || document.getElementById('demo-machine-type')?.value || 'IV Pump';
+            payload.risk_level = 'high';
+            payload.recommendations = [
+                `Intervention: Send nurse to check ${payload.machine_type} in Room`,
+            ];
+        }
+
         try {
             const resp = await fetch('/api/demo/trigger', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    patient_id: patientId,
-                    event_type: eventType,
-                    confidence: confidence,
-                }),
+                body: JSON.stringify(payload),
             });
             if (!resp.ok) {
                 console.error('Demo trigger failed:', await resp.text());
@@ -92,6 +103,7 @@ const DemoController = (() => {
             { delay: 2000, pid: patients[1]?.patient_id, event: 'fall', msg: 'Patient B falls...' },
             { delay: 3000, pid: patients[1]?.patient_id, event: 'fall_and_pain', msg: 'Pain detected on Patient B!' },
             { delay: 4000, pid: patients[0]?.patient_id, event: 'pain', msg: 'Pain detected on Patient A' },
+            { delay: 3000, pid: patients[2]?.patient_id, event: 'machine_error', msg: 'IV Pump failure in Room 103!', machineType: 'IV Pump' },
             { delay: 4000, pid: patients[2]?.patient_id, event: 'fall', msg: 'Patient C falls!' },
             { delay: 5000, pid: patients[1]?.patient_id, event: 'recover', msg: 'Patient B recovering...' },
             { delay: 3000, pid: patients[0]?.patient_id, event: 'recover', msg: 'Patient A recovering...' },
@@ -109,7 +121,7 @@ const DemoController = (() => {
 
             if (step.pid) {
                 console.log(`[AUTO] ${step.msg}`);
-                await triggerDemoEvent(step.pid, step.event, 0.88 + Math.random() * 0.1);
+                await triggerDemoEvent(step.pid, step.event, 0.88 + Math.random() * 0.1, step.machineType || '');
             }
         }
 

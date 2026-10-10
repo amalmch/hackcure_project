@@ -16,6 +16,7 @@ const PatientStateManager = (() => {
         FALL: 'fall_detected',
         PAIN: 'pain_detected',
         FALL_PAIN: 'fall_and_pain',
+        MACHINE_ERROR: 'machine_error',
     };
 
     const PRIORITIES = {
@@ -61,6 +62,9 @@ const PatientStateManager = (() => {
         p.risk_score = event.risk_score ?? p.risk_score ?? 0;
         p.behavior_indicators = event.behavior_indicators || p.behavior_indicators || [];
         p.recommendations = event.recommendations || p.recommendations || [];
+        
+        p.machine_error = event.machine_error ?? p.machine_error ?? false;
+        p.machine_type = event.machine_type ?? p.machine_type ?? "";
 
         notifyAll('update', { patient: p, event });
     }
@@ -82,6 +86,8 @@ const PatientStateManager = (() => {
                 p.risk_score = 0;
                 p.behavior_indicators = [];
                 p.recommendations = [];
+                p.machine_error = false;
+                p.machine_type = "";
             });
         }
         notifyAll('reset', null);
@@ -89,7 +95,7 @@ const PatientStateManager = (() => {
 
     function hasActiveAlerts() {
         return Object.values(patients).some(
-            p => p.fall_detected || p.pain_detected
+            p => p.fall_detected || p.pain_detected || p.machine_error
         );
     }
 
@@ -111,6 +117,10 @@ const PatientStateManager = (() => {
         });
     }
 
+    function getMachineErrorPatients() {
+        return Object.values(patients).filter(p => p.machine_error);
+    }
+
     return {
         STATES,
         PRIORITIES,
@@ -122,6 +132,7 @@ const PatientStateManager = (() => {
         resetAll,
         hasActiveAlerts,
         getCriticalPatients,
+        getMachineErrorPatients,
         subscribe,
     };
 })();

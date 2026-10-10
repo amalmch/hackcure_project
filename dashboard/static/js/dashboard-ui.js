@@ -107,13 +107,15 @@ const DashboardUI = (() => {
     }
 
     function applyCardStatus(card, patient) {
-        card.classList.remove('status-fall', 'status-pain', 'status-fall-pain');
+        card.classList.remove('status-fall', 'status-pain', 'status-fall-pain', 'status-machine-error');
         if (patient.fall_detected && patient.pain_detected) {
             card.classList.add('status-fall-pain');
         } else if (patient.fall_detected) {
             card.classList.add('status-fall');
         } else if (patient.pain_detected) {
             card.classList.add('status-pain');
+        } else if (patient.machine_error) {
+            card.classList.add('status-machine-error');
         }
     }
 
@@ -121,6 +123,7 @@ const DashboardUI = (() => {
         if (patient.fall_detected && patient.pain_detected) return '⚠ FALL + PAIN';
         if (patient.fall_detected) return '⚠ FALL';
         if (patient.pain_detected) return '😣 PAIN';
+        if (patient.machine_error) return '⚙️ ' + (patient.machine_type || 'MACHINE ERR');
         return '✓ Normal';
     }
 
@@ -128,6 +131,7 @@ const DashboardUI = (() => {
         if (patient.fall_detected && patient.pain_detected) return 'fall-pain';
         if (patient.fall_detected) return 'fall';
         if (patient.pain_detected) return 'pain';
+        if (patient.machine_error) return 'machine-error';
         return 'normal';
     }
 
@@ -165,6 +169,20 @@ const DashboardUI = (() => {
 
         detail.classList.remove('detail-hidden');
 
+        const machineRow = patient.machine_error ? `
+            <div class="detail-row detail-row-alert">
+                <span class="detail-label">⚙️ Machine</span>
+                <span class="detail-value detail-value-alert">${patient.machine_type || 'Unknown'} — ERROR</span>
+            </div>
+        ` : '';
+
+        const recsHtml = (patient.recommendations && patient.recommendations.length > 0) ? `
+            <div class="detail-row detail-row-recs">
+                <span class="detail-label">🤖 AI Agent</span>
+                <span class="detail-value">${patient.recommendations[0]}</span>
+            </div>
+        ` : '';
+
         content.innerHTML = `
             <div class="detail-row">
                 <span class="detail-label">ID</span>
@@ -182,6 +200,7 @@ const DashboardUI = (() => {
                 <span class="detail-label">State</span>
                 <span class="detail-value">${getStatusText(patient)}</span>
             </div>
+            ${machineRow}
             <div class="detail-row">
                 <span class="detail-label">Confidence</span>
                 <span class="detail-value">${patient.confidence ? (patient.confidence * 100).toFixed(1) + '%' : '—'}</span>
@@ -194,6 +213,7 @@ const DashboardUI = (() => {
                 <span class="detail-label">Source</span>
                 <span class="detail-value">${patient.source?.toUpperCase() || '—'}</span>
             </div>
+            ${recsHtml}
         `;
     }
 
@@ -219,11 +239,14 @@ const DashboardUI = (() => {
         const patient = PatientStateManager.getPatient(event.patient_id);
         const name = patient?.name || event.patient_id;
 
+        const machineLabel = event.machine_type ? ` — ${event.machine_type}` : '';
         const typeLabels = {
             fall: '⚠️ Fall Detected',
             pain: '😣 Pain Detected',
             fall_and_pain: '🚨 Fall + Pain',
             recover: '✅ Recovery',
+            machine_error: `⚙️ Machine Failure${machineLabel}`,
+            behavioral_risk: '🧠 Behavioral Risk',
         };
 
         item.innerHTML = `
@@ -262,6 +285,8 @@ const DashboardUI = (() => {
             pain: 'event-pain',
             fall_and_pain: 'event-fall-pain',
             recover: 'event-recover',
+            machine_error: 'event-machine-error',
+            behavioral_risk: 'event-behavioral-risk',
         };
         return map[eventType] || '';
     }
@@ -269,13 +294,18 @@ const DashboardUI = (() => {
     // ── Alerts ─────────────────────────────────────────────
     function checkAlerts() {
         const critical = PatientStateManager.getCriticalPatients();
+        const machineErrors = PatientStateManager.getMachineErrorPatients();
         const banner = document.getElementById('alert-banner');
         const text = document.getElementById('alert-text');
 
         if (critical.length > 0) {
             const names = critical.map(p => p.name || p.patient_id).join(', ');
             text.textContent = `CRITICAL ALERT — ${names}`;
-            banner.className = 'alert-visible';
+            banner.className = 'alert-visible alert-critical';
+        } else if (machineErrors.length > 0) {
+            const msgs = machineErrors.map(p => `${p.machine_type || 'Machine'} (Room ${p.room})`).join(', ');
+            text.textContent = `⚙️ MACHINE FAILURE — ${msgs}`;
+            banner.className = 'alert-visible alert-machine-error';
         } else if (!PatientStateManager.hasActiveAlerts()) {
             banner.className = 'alert-hidden';
         }

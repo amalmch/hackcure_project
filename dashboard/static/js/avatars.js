@@ -13,6 +13,7 @@ const AvatarManager = (() => {
     const avatars = {};
     const COLORS = {
         normal: 0x22c55e, fall: 0xef4444, pain: 0xf97316, fall_pain: 0xef4444, risk: 0xeab308,
+        machine_error: 0xff6b35,
         skin: 0xe8bca1, gown: 0x9ac7f2, pants: 0x6fa8dc, hair: 0xe5e7eb,
     };
     const BED = () => HospitalScene.BED;
@@ -157,8 +158,24 @@ const AvatarManager = (() => {
 
         scene.add(group);
 
+        // Machine error indicator — floating gear icon above IV pole area
+        const machErrMat = new THREE.MeshBasicMaterial({ color: 0xff3333, transparent: true, opacity: 0 });
+        const machErrGeo = new THREE.TorusGeometry(0.12, 0.035, 8, 6); // gear-like torus
+        const machErrIndicator = new THREE.Mesh(machErrGeo, machErrMat);
+        machErrIndicator.position.set(0.85, 2.5, -0.85); // above IV pole
+        group.add(machErrIndicator);
+
+        // Exclamation triangle for machine error
+        const triShape = new THREE.Shape();
+        triShape.moveTo(0, 0.1); triShape.lineTo(-0.08, -0.04); triShape.lineTo(0.08, -0.04); triShape.closePath();
+        const triMat = new THREE.MeshBasicMaterial({ color: 0xff6b35, transparent: true, opacity: 0, side: THREE.DoubleSide });
+        const triMesh = new THREE.Mesh(new THREE.ShapeGeometry(triShape), triMat);
+        triMesh.position.set(0.85, 2.75, -0.85);
+        group.add(triMesh);
+
         const a = {
             group, body, pelvis, torso, neck, arms, legs, ring, ringMat, painIndicator, painMat, label, head,
+            machErrIndicator, machErrMat, machErrTriMesh: triMesh, machErrTriMat: triMat,
             room: patient.room, state: 'normal', pose: null, poses: null,
             bed: HospitalScene.getBedParts(patient.room),
         };
@@ -202,14 +219,24 @@ const AvatarManager = (() => {
     function updateAvatarState(patient) {
         const a = avatars[patient.patient_id];
         if (!a) return;
-        const { ringMat, painMat } = a;
+        const { ringMat, painMat, machErrMat, machErrTriMat } = a;
 
         if (patient.fall_detected && patient.pain_detected) { ringMat.color.setHex(COLORS.fall_pain); ringMat.opacity = 0.9; }
         else if (patient.fall_detected) { ringMat.color.setHex(COLORS.fall); ringMat.opacity = 0.9; }
         else if (patient.pain_detected) { ringMat.color.setHex(COLORS.pain); ringMat.opacity = 0.8; }
+        else if (patient.machine_error) { ringMat.color.setHex(COLORS.machine_error); ringMat.opacity = 0.85; }
         else if (patient.risk_level === 'high' || patient.risk_level === 'critical') { ringMat.color.setHex(COLORS.risk); ringMat.opacity = 0.8; }
         else { ringMat.color.setHex(COLORS.normal); ringMat.opacity = 0.5; }
         painMat.opacity = patient.pain_detected ? 0.9 : 0;
+
+        // Machine error indicator visibility
+        if (patient.machine_error) {
+            machErrMat.opacity = 0.9;
+            machErrTriMat.opacity = 0.9;
+        } else {
+            machErrMat.opacity = 0;
+            machErrTriMat.opacity = 0;
+        }
 
         a.pose = a.poses[poseKey(patient)];
         a.state = patient.state;
@@ -249,6 +276,14 @@ const AvatarManager = (() => {
                 a.head.getWorldPosition(_v);
                 a.group.worldToLocal(_v);
                 a.painIndicator.position.copy(_v).add(new THREE.Vector3(0, 0.4, 0));
+            }
+            // Machine error: spin gear + flash triangle
+            if (a.machErrMat.opacity > 0) {
+                a.machErrIndicator.rotation.z = time * 3;
+                a.machErrIndicator.rotation.x = Math.PI / 2;
+                a.machErrMat.opacity = 0.5 + 0.5 * Math.sin(time * 5);
+                a.machErrTriMat.opacity = 0.5 + 0.5 * Math.sin(time * 5 + Math.PI);
+                a.machErrTriMesh.position.y = 2.75 + 0.05 * Math.sin(time * 2);
             }
         });
     }
