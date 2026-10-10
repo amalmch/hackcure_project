@@ -1,0 +1,37 @@
+{
+  "model": "DINOv2_ViT-S_Transformer_Classifier",
+  "best_epoch": 7,
+  "epochs_trained": 30,
+  "test_metrics": {
+    "accuracy": 0.9231,
+    "macro_f1": 0.9174,
+    "roc_auc": 0.9746,
+    "falling": {
+      "precision": 0.86,
+      "recall": 0.9348,
+      "f1": 0.8958,
+      "support": 46
+    },
+    "no_falling": {
+      "precision": 0.9625,
+      "recall": 0.9167,
+      "f1": 0.939,
+      "support": 84
+    },
+    "confusion_matrix": {
+      "tp_fall": 43,
+      "fn_fall": 3,
+      "fp_fall": 7,
+      "tn_fall": 77
+    }
+  },
+  "performance": {
+    "head_latency_ms": 5.35,
+    "head_fps": 186.8
+  },
+  "pertinence": {
+    "verdict": "HAUTEMENT PERTINENT",
+    "is_pertinent": true,
+    "justification": "Avec un rappel de 93.5% sur les chutes et une pr\u00e9cision globale de 92.3%, le Vision Transformer capture efficacement la s\u00e9mantique de posture et d'orientation corporelle."
+  }
+}

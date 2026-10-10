@@ -21,7 +21,12 @@ from .temporal.fall_detector import FallDetector
 from .face.discomfort import DiscomfortAssociator
 from .spatial.position import compute_position
 from .visualization import annotate_frame
+from .transformer.model import HackCurePatientTransformer
+from .temporal.risk_analyzer import TemporalRiskAnalyzer
+from .temporal.agent_adapter import InterventionAgentAdapter
+import torch
 
+CV_DIR = Path(__file__).resolve().parent.parent
 logger = logging.getLogger(__name__)
 
 
@@ -79,6 +84,22 @@ class PatientMonitor:
             self.discomfort_associator = DiscomfortAssociator()
 
         self.class_names = self.tracker.class_names
+
+        # Vision Transformer & Temporal Decision Integration
+        self.device = device
+        self.temporal_risk_analyzer = TemporalRiskAnalyzer(window_size=30)
+        self.agent_adapter = InterventionAgentAdapter()
+        self.transformer = None
+
+        transformer_weights = CV_DIR / "runs" / "patient_transformer" / "best_transformer.pt"
+        try:
+            self.transformer = HackCurePatientTransformer(device=device)
+            if transformer_weights.exists():
+                ckpt = torch.load(transformer_weights, map_location=self.transformer.device, weights_only=True)
+                self.transformer.head.load_state_dict(ckpt["model_state"])
+                logger.info(f"Loaded trained HackCure Vision Transformer from {transformer_weights}")
+        except Exception as e:
+            logger.warning(f"Vision Transformer could not be initialized: {e}")
 
     def process_frame(
         self,
@@ -166,7 +187,40 @@ class PatientMonitor:
                 {"detected": False, "confidence": 0.0},
             )
 
-            # Build structured output
+            # Step 6: Vision Transformer Feature & Posture Extraction
+            x1, y1, x2, y2 = [int(v) for v in track.bbox]
+            crop_bgr = frame[max(0, y1):min(img_h, y2), max(0, x1):min(img_w, x2)]
+            trans_result = None
+            fall_prob = 0.9 if track.class_name == "falling" else 0.1
+            posture_pred = track.class_name
+
+            if self.transformer is not None and crop_bgr.size > 0:
+                try:
+                    crop_rgb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)
+                    trans_result = self.transformer.predict_crop(crop_rgb)
+                    fall_prob = trans_result.get("fall_probability", fall_prob)
+                    posture_pred = trans_result.get("class_name", posture_pred)
+                except Exception as e:
+                    logger.debug(f"Transformer crop prediction error: {e}")
+
+            # Step 7: Temporal Risk & Behavior Analysis
+            patient_str_id = f"patient_{track.track_id:02d}"
+            self.temporal_risk_analyzer.update_patient(
+                patient_id=patient_str_id,
+                yolo_state=track.class_name,
+                yolo_confidence=track.confidence,
+                yolo_velocity=movement.velocity,
+                transformer_posture=posture_pred,
+                transformer_fall_prob=fall_prob,
+                discomfort_detected=disc.get("detected", False),
+                discomfort_conf=disc.get("confidence", 0.0),
+            )
+            event_payload = self.temporal_risk_analyzer.generate_event(patient_str_id)
+            recs = self.agent_adapter.request_recommendation(event_payload) if event_payload else []
+            if event_payload:
+                event_payload["recommendations"] = recs
+
+            # Build enriched structured output
             output = {
                 "patient_id": track.track_id,
                 "timestamp": round(ts, 3),
@@ -183,6 +237,12 @@ class PatientMonitor:
                     ),
                 },
                 "trajectory": list(track.center_history),
+                "transformer_analysis": trans_result,
+                "risk_level": event_payload.get("risk_level", "low") if event_payload else "low",
+                "risk_score": event_payload.get("risk_score", 0.0) if event_payload else 0.0,
+                "behavior_indicators": event_payload.get("evidence", []) if event_payload else [],
+                "recommendations": recs,
+                "event_payload": event_payload,
             }
             patient_outputs.append(output)
 

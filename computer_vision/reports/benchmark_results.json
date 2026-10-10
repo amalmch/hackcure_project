@@ -1,0 +1,40 @@
+[
+  {
+    "model": "C:\\Users\\bousl\\Desktop\\hackcure_project\\computer_vision\\runs\\patient_yolov8n\\baseline\\weights\\best.pt",
+    "imgsz": 512,
+    "device": "0",
+    "runs": 100,
+    "fps": 158.4,
+    "latency_ms": {
+      "mean": 6.31,
+      "median": 6.23,
+      "min": 5.34,
+      "max": 8.79,
+      "std": 0.58,
+      "p95": 7.43,
+      "p99": 8.3
+    },
+    "preprocess_ms": 0.52,
+    "inference_ms": 5.11,
+    "postprocess_ms": 0.43
+  },
+  {
+    "model": "C:\\Users\\bousl\\Desktop\\hackcure_project\\computer_vision\\runs\\patient_yolov8n\\baseline\\weights\\best.pt",
+    "imgsz": 640,
+    "device": "0",
+    "runs": 100,
+    "fps": 142.9,
+    "latency_ms": {
+      "mean": 7.0,
+      "median": 6.82,
+      "min": 6.02,
+      "max": 9.03,
+      "std": 0.6,
+      "p95": 8.17,
+      "p99": 8.82
+    },
+    "preprocess_ms": 1.3,
+    "inference_ms": 4.92,
+    "postprocess_ms": 0.49
+  }
+]

@@ -1,0 +1,62 @@
+{
+  "validation": {
+    "split": "val",
+    "model": "C:\\Users\\bousl\\Desktop\\hackcure_project\\computer_vision\\runs\\patient_yolov8n\\baseline\\weights\\best.pt",
+    "overall": {
+      "precision": 0.9375043805652405,
+      "recall": 0.8617979341971538,
+      "f1": 0.8980584611633828,
+      "mAP50": 0.9146055126807766,
+      "mAP50_95": 0.7266158386972802
+    },
+    "per_class": {
+      "falling": {
+        "class_id": 0,
+        "precision": 0.9107024285780053,
+        "recall": 0.792,
+        "f1": 0.84721359069192,
+        "AP50": 0.8770701671208048,
+        "AP50_95": 0.65828038927426
+      },
+      "no_falling": {
+        "class_id": 1,
+        "precision": 0.9643063325524759,
+        "recall": 0.9315958683943076,
+        "f1": 0.9476689146575077,
+        "AP50": 0.9521408582407485,
+        "AP50_95": 0.7949512881203006
+      }
+    },
+    "plots_dir": "C:\\Users\\bousl\\Desktop\\hackcure_project\\computer_vision\\runs\\detect\\val"
+  },
+  "test": {
+    "split": "test",
+    "model": "C:\\Users\\bousl\\Desktop\\hackcure_project\\computer_vision\\runs\\patient_yolov8n\\baseline\\weights\\best.pt",
+    "overall": {
+      "precision": 0.9174366791869963,
+      "recall": 0.9307341523308432,
+      "f1": 0.9240375735168102,
+      "mAP50": 0.93810344640797,
+      "mAP50_95": 0.7512943350623461
+    },
+    "per_class": {
+      "falling": {
+        "class_id": 0,
+        "precision": 0.8599040862713937,
+        "recall": 0.9340528303258216,
+        "f1": 0.89544607641616,
+        "AP50": 0.8990253692407117,
+        "AP50_95": 0.6773300647645676
+      },
+      "no_falling": {
+        "class_id": 1,
+        "precision": 0.9749692721025989,
+        "recall": 0.9274154743358647,
+        "f1": 0.9505980185025444,
+        "AP50": 0.9771815235752284,
+        "AP50_95": 0.8252586053601247
+      }
+    },
+    "plots_dir": "C:\\Users\\bousl\\Desktop\\hackcure_project\\computer_vision\\runs\\detect\\val-2"
+  }
+}
