@@ -12,7 +12,7 @@
 const AvatarManager = (() => {
     const avatars = {};
     const COLORS = {
-        normal: 0x22c55e, fall: 0xef4444, pain: 0xf97316, fall_pain: 0xef4444,
+        normal: 0x22c55e, fall: 0xef4444, pain: 0xf97316, fall_pain: 0xef4444, risk: 0xeab308,
         skin: 0xe8bca1, gown: 0x9ac7f2, pants: 0x6fa8dc, hair: 0xe5e7eb,
     };
     const BED = () => HospitalScene.BED;
@@ -207,6 +207,7 @@ const AvatarManager = (() => {
         if (patient.fall_detected && patient.pain_detected) { ringMat.color.setHex(COLORS.fall_pain); ringMat.opacity = 0.9; }
         else if (patient.fall_detected) { ringMat.color.setHex(COLORS.fall); ringMat.opacity = 0.9; }
         else if (patient.pain_detected) { ringMat.color.setHex(COLORS.pain); ringMat.opacity = 0.8; }
+        else if (patient.risk_level === 'high' || patient.risk_level === 'critical') { ringMat.color.setHex(COLORS.risk); ringMat.opacity = 0.8; }
         else { ringMat.color.setHex(COLORS.normal); ringMat.opacity = 0.5; }
         painMat.opacity = patient.pain_detected ? 0.9 : 0;
 

@@ -56,6 +56,11 @@ const PatientStateManager = (() => {
         p.alert_priority = event.alert_priority || p.alert_priority;
         p.last_event_time = event.timestamp || new Date().toISOString();
         p.source = event.source || p.source;
+        
+        p.risk_level = event.risk_level || p.risk_level || 'none';
+        p.risk_score = event.risk_score ?? p.risk_score ?? 0;
+        p.behavior_indicators = event.behavior_indicators || p.behavior_indicators || [];
+        p.recommendations = event.recommendations || p.recommendations || [];
 
         notifyAll('update', { patient: p, event });
     }
@@ -73,6 +78,10 @@ const PatientStateManager = (() => {
                 p.confidence = 0;
                 p.alert_priority = 'none';
                 p.source = 'system';
+                p.risk_level = 'none';
+                p.risk_score = 0;
+                p.behavior_indicators = [];
+                p.recommendations = [];
             });
         }
         notifyAll('reset', null);

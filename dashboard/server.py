@@ -137,10 +137,13 @@ current_mode = {"mode": "demo"}  # "demo" or "real"
 # ─── Pydantic Models ──────────────────────────────────────
 class DemoEvent(BaseModel):
     patient_id: str
-    event_type: str  # "fall", "pain", "fall_and_pain", "recover"
+    event_type: str  # "fall", "pain", "fall_and_pain", "recover", or "behavioral_risk"
     confidence: float = 0.90
-
-
+    risk_level: str = "none" # none, low, moderate, high, critical
+    risk_score: float = 0.0
+    behavior_indicators: list[str] = []
+    recommendations: list[str] = []
+    
 class ModeSwitch(BaseModel):
     mode: str  # "demo" or "real"
 
@@ -151,6 +154,10 @@ async def process_event(
     event_type: str,
     source: str = "demo",
     confidence: float = 0.90,
+    risk_level: str = "none",
+    risk_score: float = 0.0,
+    behavior_indicators: list = None,
+    recommendations: list = None
 ):
     """Update patient state and broadcast to all clients."""
     if patient_id not in patients:
@@ -159,27 +166,42 @@ async def process_event(
 
     patient = patients[patient_id]
     now = datetime.now(timezone.utc).isoformat()
+    
+    behavior_indicators = behavior_indicators or []
+    recommendations = recommendations or []
 
     if event_type == "fall":
         patient["fall_detected"] = True
         patient["pain_detected"] = False
         patient["state"] = "fall_detected"
         patient["alert_priority"] = "critical"
+        risk_level = "critical"
+        risk_score = max(risk_score, 0.95)
     elif event_type == "pain":
         patient["fall_detected"] = False
         patient["pain_detected"] = True
         patient["state"] = "pain_detected"
         patient["alert_priority"] = "high"
+        risk_level = "high" if risk_level == "none" else risk_level
     elif event_type == "fall_and_pain":
         patient["fall_detected"] = True
         patient["pain_detected"] = True
         patient["state"] = "fall_and_pain"
         patient["alert_priority"] = "critical"
+        risk_level = "critical"
+        risk_score = max(risk_score, 0.95)
+    elif event_type == "behavioral_risk":
+        # Do not force a fall or pain state, just update risk
+        pass
     elif event_type == "recover":
         patient["fall_detected"] = False
         patient["pain_detected"] = False
         patient["state"] = "normal"
         patient["alert_priority"] = "none"
+        risk_level = "none"
+        risk_score = 0.0
+        behavior_indicators = []
+        recommendations = []
     else:
         logger.warning(f"Unknown event type: {event_type}")
         return
@@ -187,6 +209,12 @@ async def process_event(
     patient["confidence"] = confidence
     patient["last_event_time"] = now
     patient["source"] = source
+    
+    # New AI fields
+    patient["risk_level"] = risk_level
+    patient["risk_score"] = risk_score
+    patient["behavior_indicators"] = behavior_indicators
+    patient["recommendations"] = recommendations
 
     # Build event message
     event = {
@@ -199,6 +227,10 @@ async def process_event(
         "state": patient["state"],
         "confidence": confidence,
         "alert_priority": patient["alert_priority"],
+        "risk_level": risk_level,
+        "risk_score": risk_score,
+        "behavior_indicators": behavior_indicators,
+        "recommendations": recommendations,
         "timestamp": now,
     }
 
@@ -209,7 +241,7 @@ async def process_event(
 
     # Broadcast
     await manager.broadcast(event)
-    logger.info(f"[{source.upper()}] {patient_id}: {event_type} (conf={confidence:.2f})")
+    logger.info(f"[{source.upper()}] {patient_id}: {event_type} (conf={confidence:.2f}, risk={risk_level})")
 
 
 # ─── WebSocket Endpoint ───────────────────────────────────
@@ -267,6 +299,10 @@ async def trigger_demo_event(event: DemoEvent):
         event_type=event.event_type,
         source="simulation",
         confidence=event.confidence,
+        risk_level=event.risk_level,
+        risk_score=event.risk_score,
+        behavior_indicators=event.behavior_indicators,
+        recommendations=event.recommendations
     )
     return JSONResponse(content={"status": "ok", "event": event.event_type})
 
@@ -300,14 +336,17 @@ async def switch_mode(mode: ModeSwitch):
 @app.post("/api/yolo/event")
 async def receive_yolo_event(event: DemoEvent):
     """
-    Receive real YOLO detection events (Scenario A).
-    Called by camera_loop.py when the AI detects something.
+    Receive real AI detection events from YOLO/Transformer.
     """
     await process_event(
         patient_id=event.patient_id,
         event_type=event.event_type,
-        source="yolo",
+        source="ai_pipeline",
         confidence=event.confidence,
+        risk_level=event.risk_level,
+        risk_score=event.risk_score,
+        behavior_indicators=event.behavior_indicators,
+        recommendations=event.recommendations
     )
     return JSONResponse(content={"status": "ok"})
 

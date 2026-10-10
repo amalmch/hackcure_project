@@ -1379,6 +1379,17 @@ const HospitalScene = (() => {
             buildExterior();
             Object.keys(ROOMS).forEach(id => buildRoom(id, ROOMS[id]));
 
+            // ── Étage 1 + salles spécialisées + visite à pied (floors.js) ──
+            if (typeof HospitalFloors !== 'undefined') {
+                try {
+                    HospitalFloors.init({
+                        scene, camera, controls, renderer, container, MAT, textures, ROOMS, roomGroups, REC, WALL_H, WALL_T,
+                        B, C, tube, rbox, mesh, std, canvasTex, tiledMat, buildWallX,
+                        moveCameraTo, cancelTween: () => { camTween = null; }, resetCamera, zoomToRoom, zoomToReception,
+                    });
+                } catch (e) { console.error('HospitalFloors init error:', e); }
+            }
+
             window.addEventListener('resize', onResize);
             renderer.domElement.addEventListener('dblclick', onDoubleClick);
             addRoomButtons();
@@ -1393,7 +1404,8 @@ const HospitalScene = (() => {
         animationId = requestAnimationFrame(animate);
         const now = performance.now();
         stepTween(now);
-        controls.update();
+        const walking = typeof HospitalFloors !== 'undefined' && HospitalFloors.isWalking();
+        if (!walking && !camTween) controls.update();
 
         if (now - lastVitalsSync > 500) { lastVitalsSync = now; syncVitals(); }
         if (now - lastMonitorDraw > 66) {
@@ -1403,6 +1415,7 @@ const HospitalScene = (() => {
         const dt = Math.min((now - (animate.last || now)) / 1000, 0.1); animate.last = now;
         animateExterior(now / 1000, dt);
         if (typeof AvatarManager !== 'undefined') AvatarManager.update(dt);
+        if (typeof HospitalFloors !== 'undefined') HospitalFloors.update(dt, now / 1000);
         renderer.render(scene, camera);
     }
 
@@ -1414,7 +1427,8 @@ const HospitalScene = (() => {
     }
 
     // ─── Camera ────────────────────────────────────────────
-    function moveCameraTo(pos, target, duration = 1.0, fov = 45) {
+    function moveCameraTo(pos, target, duration = 0.4, fov = 45) {
+        if (typeof HospitalFloors !== 'undefined' && HospitalFloors.isWalking()) return;   // pas de caméra animée pendant la visite
         camTween = {
             t0: performance.now(), dur: duration * 1000,
             p0: camera.position.clone(), p1: pos.clone(),
@@ -1440,7 +1454,7 @@ const HospitalScene = (() => {
         room.updateMatrixWorld(true);
         const pos = room.localToWorld(new THREE.Vector3(CCTV_LOCAL.x, CCTV_LOCAL.y - 0.1, CCTV_LOCAL.z - 0.1));
         const target = room.localToWorld(new THREE.Vector3(BED.x + 0.35, 0.6, BED.z + 0.25));
-        moveCameraTo(pos, target, 0.7, 62);
+        moveCameraTo(pos, target, 0.35, 62);
     }
     // Wide view from inside the room's corner, then orbit/scroll freely
     function zoomToRoom(roomId) {
@@ -1448,13 +1462,14 @@ const HospitalScene = (() => {
         room.updateMatrixWorld(true);
         const pos = room.localToWorld(new THREE.Vector3(0.0, 2.6, 2.7));
         const target = room.localToWorld(new THREE.Vector3(-1.2, 0.7, -1.6));
-        moveCameraTo(pos, target, 0.8, 66);
+        moveCameraTo(pos, target, 0.4, 66);
         const ov = document.getElementById('cctv-overlay'); if (ov) ov.classList.add('cctv-hidden');
     }
 
     // Double-click anything (bed, monitor, curtain, patient...) to fly in close to it
     const _ray = new THREE.Raycaster(), _m = new THREE.Vector2();
     function onDoubleClick(ev) {
+        if (typeof HospitalFloors !== 'undefined' && HospitalFloors.isWalking()) return;
         const r = renderer.domElement.getBoundingClientRect();
         _m.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
         _ray.setFromCamera(_m, camera);
@@ -1466,7 +1481,7 @@ const HospitalScene = (() => {
         const dir = camera.position.clone().sub(p).normalize();
         const pos = p.clone().add(dir.multiplyScalar(2.4));
         pos.y = Math.max(pos.y, 0.8);
-        moveCameraTo(pos, p, 0.7, 50);
+        moveCameraTo(pos, p, 0.35, 50);
         const ov = document.getElementById('cctv-overlay'); if (ov) ov.classList.add('cctv-hidden');
     }
 
@@ -1489,8 +1504,8 @@ const HospitalScene = (() => {
     }
 
     const V = (a) => new THREE.Vector3(a[0], a[1], a[2]);
-    function resetCamera() { const c = CAMERA_POSITIONS.overview; moveCameraTo(V(c.pos), V(c.target), 0.8, c.fov); }
-    function topDownView() { const c = CAMERA_POSITIONS.topdown; moveCameraTo(V(c.pos), V(c.target), 0.8, c.fov); }
+    function resetCamera() { const c = CAMERA_POSITIONS.overview; moveCameraTo(V(c.pos), V(c.target), 0.4, c.fov); }
+    function topDownView() { const c = CAMERA_POSITIONS.topdown; moveCameraTo(V(c.pos), V(c.target), 0.4, c.fov); }
 
     // ─── Public helpers (used by avatars.js) ───────────────
     function getScene() { return scene; }
