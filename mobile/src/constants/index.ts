@@ -14,10 +14,8 @@ const getDevApiUrl = () => {
     }
   }
 
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8088';
-  }
-  return 'http://172.24.150.252:8088';
+  // Fallback to active LAN IP for physical phone and dev machines
+  return 'http://172.20.10.13:8088';
 };
 
 export const API_BASE_URL = getDevApiUrl();
