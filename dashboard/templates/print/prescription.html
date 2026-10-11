@@ -1,0 +1,35 @@
+{% extends "_base.html" %}
+{% block title %}Ordonnance #{{ p.id }} — {{ p.patient }}{% endblock %}
+{% block body %}
+<h2 class="title">Ordonnance {% if p.status == 'signed' %}<span class="stamp">Signée</span>{% else %}<span class="draft">Brouillon</span>{% endif %}</h2>
+<div class="meta">
+    <div><b>Patient :</b> {{ p.patient }} ({{ p.patient_code }}), {{ p.patient_age }} ans</div>
+    <div><b>Chambre :</b> {{ p.room }}</div>
+    <div><b>Allergies :</b> {{ p.patient_allergies or 'aucune connue' }}</div>
+    <div><b>Prescripteur :</b> {{ p.prescriber }}</div>
+    <div><b>Date :</b> {{ p.created_at | fmt }}</div>
+    <div><b>Signée le :</b> {{ p.signed_at | fmt }}</div>
+</div>
+{% if p.has_allergy_warning %}<div class="warn">⚠ ALERTE ALLERGIE : au moins une ligne est contre-indiquée par les allergies connues du patient.</div>{% endif %}
+<table class="lines">
+    <thead><tr><th>#</th><th>Médicament (DCI / marque)</th><th>Forme · dosage</th><th>Posologie</th><th>Voie</th><th>Durée</th></tr></thead>
+    <tbody>
+    {% for l in p.lines %}
+    <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ l.medication.dci }} <span style="color:#6b7280">({{ l.medication.brand }})</span>{% if l.allergy_warning %}<br><span style="color:#b91c1c;font-weight:700">⚠ allergie : {{ l.conflicts | join(', ') }}</span>{% endif %}</td>
+        <td>{{ l.medication.form }} · {{ l.medication.dosage }}</td>
+        <td>{{ l.dosage }} {{ l.frequency }}</td>
+        <td>{{ l.route }}</td>
+        <td>{{ l.duration_days }} j</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% if p.notes %}<p class="content"><b>Remarques :</b> {{ p.notes }}</p>{% endif %}
+<div class="signature">
+    <div class="box">Signature et cachet du prescripteur<br><br>{{ p.prescriber }}</div>
+    <div class="box">Dispensation pharmacie<br><br>&nbsp;</div>
+</div>
+{% endblock %}
+{% block footer %}Ordonnance n° {{ p.id }}{% endblock %}

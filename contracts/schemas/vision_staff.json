@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hackcure/vision_staff.json",
+  "title": "hackcure/room/{room}/vision/staff",
+  "type": "object",
+  "required": ["ts", "source", "event", "persons"],
+  "properties": {
+    "ts": { "type": "string" },
+    "source": { "type": "string" },
+    "event": { "enum": ["staff_enter", "staff_leave"] },
+    "persons": { "type": "integer", "minimum": 0 },
+    "durationSec": { "type": ["number", "null"], "minimum": 0 },
+    "staffId": { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

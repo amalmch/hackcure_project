@@ -1,151 +1,163 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HackCure — AI Patient Monitoring</title>
-    <meta name="description" content="Privacy-preserving AI patient monitoring with 3D digital twin simulation">
+    <title>Hospital Copilot</title>
+    <meta name="description" content="Supervision de clinique avec jumeau numérique 3D et agents IA (aide à la décision)">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Three.js -->
+    <!-- Three.js (r128, global) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Leaflet + OpenStreetMap (carte des ambulances) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <!-- Chart.js (courbes des machines) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
     <!-- Styles -->
     <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/platform.css">
+    <link rel="stylesheet" href="/static/css/v3.css">
 </head>
-
 <body>
-    <!-- ═══ Top Bar ═══ -->
+    <!-- ═══ Barre du haut ═══ -->
     <header id="top-bar">
         <div class="top-bar-left">
-            <div class="logo">
-                <span class="logo-icon">🏥</span>
-                <h1>HackCure</h1>
-                <span class="logo-subtitle">AI Patient Monitoring</span>
+                        <div class="logo">
+                <img src="/static/img/hospital_copilot_logo.png?v=3" alt="Hospital Copilot" class="logo-img" style="height: 36px; width: 36px; object-fit: contain; border-radius: 8px;">
+                <h1>Hospital Copilot</h1>
             </div>
         </div>
         <div class="top-bar-center">
             <div id="mode-selector">
                 <button id="btn-mode-demo" class="mode-btn active" data-mode="demo">
-                    <span class="mode-icon">🎬</span> Demo Mode
+                    <span class="mode-icon">🎬</span> Mode démo
                 </button>
                 <button id="btn-mode-real" class="mode-btn" data-mode="real">
-                    <span class="mode-icon">📡</span> Real Monitoring
+                    <span class="mode-icon">📡</span> Surveillance réelle
                 </button>
             </div>
         </div>
         <div class="top-bar-right">
+            <div class="top-anchor">
+                <button id="btn-launch-demo" title="Jouer un scénario de démonstration">▶ Lancer la démo</button>
+                <div id="demo-menu" class="hidden"></div>
+            </div>
+            <div class="top-anchor">
+                <button id="notif-bell" class="icon-btn" title="Notifications">🔔<span id="notif-badge" class="notif-badge" data-count="0"></span></button>
+                <div id="notif-dropdown" class="hidden"></div>
+            </div>
+            <div id="n8n-status" class="n8n-badge n8n-disabled" title="Orchestration n8n"><span class="status-dot"></span><span class="n8n-text">n8n</span></div>
+            <a id="btn-open-n8n" class="btn btn-sm hidden" href="http://localhost:5678" target="_blank" rel="noopener" title="Ouvrir n8n dans un nouvel onglet">🔗 Ouvrir n8n</a>
             <div id="connection-status" class="status-disconnected">
                 <span class="status-dot"></span>
-                <span class="status-text">Disconnected</span>
+                <span class="status-text">Déconnecté</span>
             </div>
             <div id="clock"></div>
+            <div id="user-chip"></div>
+            <button id="btn-logout" class="icon-btn" title="Déconnexion">⏻</button>
         </div>
     </header>
 
-    <!-- ═══ Main Content ═══ -->
+    <!-- ═══ Contenu principal ═══ -->
     <main id="app-container">
-        <!-- Left Sidebar: Patient Cards -->
+        <!-- Panneau gauche : navigation + cartes patients + contrôles de démo -->
         <aside id="sidebar">
+            <nav id="main-nav"></nav>
             <div class="sidebar-header">
                 <h2>Patients</h2>
                 <span id="patient-count" class="badge">0</span>
             </div>
             <div id="patient-cards-container">
-                <!-- Dynamically filled -->
+                <!-- Rempli dynamiquement -->
             </div>
 
-            <!-- Demo Controls (only visible in demo mode) -->
+            <!-- Contrôles de démo (visibles en mode démo) -->
             <div id="demo-controls" class="demo-panel">
                 <h3>
                     <span class="demo-badge">SIMULATION</span>
-                    Demo Controls
+                    Contrôles de démo
                 </h3>
                 <div id="demo-patient-select">
-                    <label>Target Patient:</label>
+                    <label>Patient cible :</label>
                     <select id="demo-target-patient">
-                        <!-- Dynamically filled -->
+                        <!-- Rempli dynamiquement -->
                     </select>
                 </div>
                 <div class="demo-buttons">
                     <button class="demo-btn demo-btn-fall" data-event="fall">
-                        ⚠️ Trigger Fall
+                        ⚠️ Chute
                     </button>
                     <button class="demo-btn demo-btn-pain" data-event="pain">
-                        😣 Trigger Pain
+                        😣 Douleur
                     </button>
                     <button class="demo-btn demo-btn-both" data-event="fall_and_pain">
-                        🚨 Fall + Pain
+                        🚨 Chute + douleur
                     </button>
                     <button class="demo-btn demo-btn-machine" data-event="machine_error">
-                        ⚙️ Machine Error
+                        ⚙️ Panne machine
                     </button>
                     <button class="demo-btn demo-btn-recover" data-event="recover">
-                        ✅ Recovery
+                        ✅ Récupération
                     </button>
                 </div>
                 <div id="demo-machine-select" style="margin-bottom: 0.6rem;">
-                    <label>Machine Type:</label>
+                    <label>Appareil en panne :</label>
                     <select id="demo-machine-type">
-                        <option value="IV Pump">💉 IV Pump (Sérum)</option>
-                        <option value="ECG Monitor">📊 ECG Monitor</option>
-                        <option value="Blood Pressure Monitor">🩸 Blood Pressure</option>
-                        <option value="Infusion Pump">💧 Infusion Pump</option>
-                        <option value="Urine Bag">🧪 Urine Bag</option>
-                        <option value="Thermometer">🌡️ Thermometer</option>
+                        <option value="IV Pump">💉 Pompe à perfusion</option>
+                        <option value="ECG Monitor">📊 Moniteur ECG</option>
+                        <option value="Blood Pressure Monitor">🩸 Tensiomètre</option>
+                        <option value="Infusion Pump">💧 Pompe de nutrition</option>
+                        <option value="Urine Bag">🧪 Poche à urine</option>
+                        <option value="Thermometer">🌡️ Thermomètre</option>
                     </select>
                 </div>
                 <div class="demo-actions">
                     <button id="btn-auto-demo" class="demo-btn demo-btn-auto">
-                        ▶️ Auto Sequence
+                        ▶️ Séquence auto
                     </button>
                     <button id="btn-reset-all" class="demo-btn demo-btn-reset">
-                        🔄 Reset All
+                        🔄 Tout réinitialiser
                     </button>
                 </div>
             </div>
 
-            <!-- Hardware Sensor Panel -->
-            <div id="sensor-panel" class="demo-panel" style="margin-top: 1rem; border-color: #64748b;">
+            <!-- Capteurs d'environnement (panneau d'Amal, branché sur room_state.env) -->
+            <div id="sensor-panel" class="demo-panel">
                 <h3>
-                    <span class="demo-badge" style="background: #475569;">HARDWARE</span>
-                    Environment Sensors
+                    <span class="demo-badge sensor-badge">CAPTEURS</span>
+                    Environnement
                 </h3>
-                <div
-                    style="font-size: 0.85rem; color: #94a3b8; padding: 0.5rem; background: rgba(15,23,42,0.5); border-radius: 4px; border-left: 3px solid #eab308;">
-                    <strong>🌡️ Temperature:</strong><br />
-                    Temperature unavailable — no compatible sensor connected.
-                </div>
+                <div id="sensor-rows"><div class="muted small">En attente des capteurs…</div></div>
             </div>
         </aside>
 
-        <!-- Center: 3D Viewport -->
+        <!-- Centre : viewport 3D (+ vues HTML par-dessus) -->
         <section id="viewport-container">
-            <!-- Alert Banner -->
+            <!-- Bannière d'alerte -->
             <div id="alert-banner" class="alert-hidden">
                 <div class="alert-content">
                     <span class="alert-icon">🚨</span>
-                    <span id="alert-text">ALERT</span>
+                    <span id="alert-text">ALERTE</span>
                     <button id="alert-dismiss" class="alert-close">✕</button>
                 </div>
             </div>
 
-            <!-- Mode Indicator -->
+            <!-- Indicateur de mode -->
             <div id="mode-indicator">
-                <span id="mode-label">DEMO MODE</span>
+                <span id="mode-label">MODE DÉMO</span>
             </div>
 
-            <!-- Three.js Canvas -->
+            <!-- Canvas Three.js -->
             <div id="three-container"></div>
 
-            <!-- CCTV Filter Overlay -->
+            <!-- Overlay CCTV -->
             <div id="cctv-overlay" class="cctv-hidden">
                 <div class="cctv-scanlines"></div>
                 <div class="cctv-static"></div>
@@ -165,39 +177,112 @@
                 </div>
             </div>
 
-            <!-- Camera Controls -->
+            <!-- Contrôles caméra -->
             <div id="camera-controls">
-                <button id="btn-overview" class="cam-btn" title="Overview">🏠</button>
-                <button id="btn-topdown" class="cam-btn" title="Top Down">⬇️</button>
+                <button id="btn-overview" class="cam-btn" title="Vue d'ensemble">🏠</button>
+                <button id="btn-topdown" class="cam-btn" title="Vue de dessus">⬇️</button>
+            </div>
+
+            <!-- Bandeau KPI (mode 3D) -->
+            <div id="kpi-bar"></div>
+
+            <!-- Vue HTML affichée par-dessus le canvas (le canvas reste vivant) -->
+            <div id="view-overlay" class="view-hidden">
+                <div class="view-header">
+                    <h2 id="view-title">Vue</h2>
+                    <div class="view-header-actions">
+                        <button id="view-close" class="btn btn-sm" title="Retour au jumeau 3D (Échap)">✕ Fermer</button>
+                    </div>
+                </div>
+                <div id="view-body"></div>
             </div>
         </section>
 
-        <!-- Right Panel: Event History -->
+        <!-- Panneau droit : Agents / Journal -->
         <aside id="event-panel">
-            <div class="panel-header">
-                <h2>Event Log</h2>
-                <span id="event-count" class="badge">0</span>
-            </div>
-            <div id="event-list">
-                <div class="event-empty">No events yet</div>
+            <div id="panel-tabs">
+                <button class="panel-tab active" data-tab="agents">🤖 Agents</button>
+                <button class="panel-tab" data-tab="journal">📜 Journal</button>
             </div>
 
-            <!-- Selected Patient Detail -->
-            <div id="patient-detail" class="detail-hidden">
-                <h3>Patient Detail</h3>
-                <div id="detail-content"></div>
-            </div>
+            <section id="agents-panel" class="panel-section" data-tab="agents">
+                <div class="agent-filters">
+                    <select id="agent-filter-agent"><option value="">Tous les agents</option></select>
+                    <select id="agent-filter-room"><option value="">Toutes les chambres</option></select>
+                </div>
+                <div id="agent-cards"></div>
+                <div id="agent-feed" class="agent-feed"></div>
+            </section>
+
+            <section id="journal-panel" class="panel-section hidden" data-tab="journal" style="display:flex;flex-direction:column;flex:1;min-height:0">
+                <div class="panel-header">
+                    <h2>Journal des événements</h2>
+                    <span id="event-count" class="badge">0</span>
+                </div>
+                <div id="event-list">
+                    <div class="event-empty">Aucun événement</div>
+                </div>
+
+                <!-- Détail du patient sélectionné -->
+                <div id="patient-detail" class="detail-hidden">
+                    <h3>Détail patient</h3>
+                    <div id="detail-content"></div>
+                </div>
+            </section>
         </aside>
     </main>
 
-    <!-- Scripts -->
+    <div id="toast-host"></div>
+
+    <!-- Scripts existants (ordre conservé) -->
     <script src="/static/js/patient-state.js"></script>
     <script src="/static/js/scene.js"></script>
     <script src="/static/js/avatars.js"></script>
     <script src="/static/js/dashboard-ui.js"></script>
     <script src="/static/js/demo-controller.js"></script>
+    <!-- Extensions plateforme -->
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/nav.js"></script>
+    <script src="/static/js/panel-tabs.js"></script>
+    <script src="/static/js/staff-avatars.js"></script>
+    <script src="/static/js/equipment.js"></script>
+    <script src="/static/js/equipment-faults.js"></script>
+    <script src="/static/js/room-live.js"></script>
+    <script src="/static/js/kpi-bar.js"></script>
+    <script src="/static/js/sensor-panel.js"></script>
+    <script src="/static/js/ambulance-3d.js"></script>
+    <script src="/static/js/n8n-status.js"></script>
+    <script src="/static/js/agents-panel.js"></script>
+    <script src="/static/js/notifications.js"></script>
+    <script src="/static/js/demo-launcher.js"></script>
+    <script src="/static/js/views/devices.js"></script>
+    <script src="/static/js/views/detection.js"></script>
+    <script src="/static/js/clinical-profile.js"></script>
+    <script src="/static/js/fever-panel.js"></script>
+    <script src="/static/js/views/command.js"></script>
+    <script src="/static/js/views/staff.js"></script>
+    <script src="/static/js/views/patients.js"></script>
+    <script src="/static/js/views/pharmacy.js"></script>
+    <script src="/static/js/views/history.js"></script>
+    <script src="/static/js/views/dossier.js"></script>
+    <script src="/static/js/views/care.js"></script>
+    <script src="/static/js/views/psych.js"></script>
+    <script src="/static/js/views/predictions.js"></script>
+    <script src="/static/js/views/ambulances.js"></script>
+    <script src="/static/js/views/agents-map.js"></script>
+    <script src="/static/js/views/report.js"></script>
+    <script src="/static/js/views/prescription.js"></script>
+    <script src="/static/js/views/shift.js"></script>
+    <script src="/static/js/views/cameras.js"></script>
+    <script src="/static/js/views/users.js"></script>
+    <!-- Bootstrap WebSocket (existant) -->
     <script src="/static/js/app.js"></script>
+    <!-- V3 : conformité (fichiers additifs) -->
+    <script src="/static/js/v3/sadm.js"></script>
+    <script src="/static/js/v3/fhir-export.js"></script>
+    <script src="/static/js/v3/frame-integrity.js"></script>
+    <!-- Étage 1, salles spécialisées, visite à pied (Amal) — initialisé par scene.js -->
     <script src="/static/js/floors.js"></script>
 </body>
-
 </html>

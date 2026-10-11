@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hackcure/vision_behavior.json",
+  "title": "hackcure/room/{room}/vision/behavior (sur changement, sinon toutes les 15 s)",
+  "type": "object",
+  "required": [
+    "ts",
+    "source",
+    "riskLevel",
+    "riskScore",
+    "indicators"
+  ],
+  "properties": {
+    "ts": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string"
+    },
+    "riskLevel": {
+      "enum": [
+        "none",
+        "low",
+        "moderate",
+        "high",
+        "critical"
+      ]
+    },
+    "riskScore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "indicators": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "transformer": {
+      "type": "boolean"
+    },
+    "fallProbability": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    }
+  },
+  "additionalProperties": true
+}

@@ -125,8 +125,11 @@
                 break;
 
             default:
-                console.log('[WS] Unknown message:', msg.type);
+                // Nouveaux types (room_state, agent_log, risk, notification...) : traités par les extensions
+                break;
         }
+        // Extensions (room-live.js, agents-panel.js, kpi-bar.js...) : écoute globale de tous les messages
+        try { window.dispatchEvent(new CustomEvent('hackcure:ws', { detail: msg })); } catch (e) { console.error(e); }
     }
 
     // ── Mode Switching ────────────────────────────────────

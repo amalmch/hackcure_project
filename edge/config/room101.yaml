@@ -1,0 +1,99 @@
+# ─── Edge Raspberry Pi 5 — chambre 101 ───────────────────────────────────────
+room: "101"
+source: "edge"                      # préfixe de `source` : edge-yolo | edge-pose | edge-fake (complété automatiquement)
+
+server:
+  url: "http://192.168.1.10:8000"   # serveur dashboard (repli HTTP POST /api/ingest + commandes)
+  api_key: ""                       # INGEST_API_KEY si défini côté serveur
+mqtt:
+  host: "192.168.1.10"              # broker Mosquitto (docker compose up -d) ; vide = HTTP seulement
+  port: 1883
+  prefix: "hackcure"
+  # MQTT sur TLS (V3) : tls: true, port: 8883, ca_file: chemin de l'autorité du broker (voir docs/securite.md)
+  # tls: true
+  # ca_file: "/home/pi/hackcure/ca.crt"
+
+camera:
+  source: 0                         # index webcam / chemin vidéo / URL RTSP ; "picamera" pour libcamera
+  width: 640
+  height: 480
+  fps: 15
+  process_every: 2                  # 1 image sur N envoyée au modèle
+  stream_port: 8080                 # aperçu MJPEG flouté (0 = désactivé) : http://<pi>:8080/stream
+
+models:
+  # ordre de repli (section 6.4) : poids entraînés → modèle pose pré-entraîné → générateur synthétique (--fake)
+  weights_search:
+    - "runs/detect/**/weights/best.pt"
+    - "computer_vision/runs/**/weights/best.pt"
+    - "computer_vision/models/*.pt"
+  pose_fallback: ["yolo11n-pose.pt", "yolov8n-pose.pt"]
+  confidence: 0.35
+  imgsz: 640
+  device: "cpu"
+  temporal_config: "computer_vision/configs/temporal.yaml"
+
+# Polygones en coordonnées normalisées de l'image (0..1). À régler avec `python edge/calibrate_zones.py`.
+zones:
+  bed: [[0.18, 0.35], [0.62, 0.33], [0.66, 0.85], [0.14, 0.88]]
+  bathroom_door: [[0.82, 0.20], [0.98, 0.20], [0.98, 0.75], [0.82, 0.75]]
+  exit: [[0.00, 0.00], [0.15, 0.00], [0.15, 0.30], [0.00, 0.30]]
+  hysteresis_s: 2.0
+  bed_test_point: "bottom_center"   # bottom_center | hips (si modèle pose)
+
+posture:
+  sleeping_after_s: 300             # immobile dans le lit > 5 min ⇒ sleeping
+  stillness_px: 12                  # mouvement max (px) pour « immobile »
+
+expression:
+  model: "edge/models/ferplus.onnx" # FER+ ONNX (python edge/download_ferplus.py) ; absent ⇒ neutral / 0
+  every_s: 3.0
+
+thermal:
+  enabled: true
+  i2c_address: 0x33
+  refresh_hz: 4
+  calibration_offset_c: 0.0         # offset mesuré avec un thermomètre de référence (calibrated=true si != 0 ou fichier de calibration)
+  calibration_file: "edge/config/thermal_calibration.json"
+  head_zone: "top_box"              # zone de la tête = tiers supérieur de la boîte patient
+
+sensors:
+  dht22_pin: 4
+  call_button_pin: 22
+  door_contact_pin: 5
+  env_every_s: 5.0
+
+actuators:
+  buzzer_pin: 17
+  nightlight_pin: 27
+  heater_led_pin: 23
+  ac_led_pin: 24
+  window_servo_pin: 18
+
+rules:
+  night_start: 22
+  night_end: 6
+  climate_hot_c: 27.0
+  climate_cold_c: 19.0
+  buzzer_seconds: 20
+  offline_queue_file: "edge/offline_queue.jsonl"
+
+publish:
+  vision_hz: 2.0
+  thermal_hz: 1.0
+
+# Analyse comportementale optionnelle (immobilité, agitation, instabilité) publiée sur vision/behavior.
+# transformer: true n'a d'effet que si PyTorch, le backbone DINOv2 et les poids entraînés
+# (computer_vision/runs/patient_transformer/best_transformer.pt) sont déjà sur le disque ; rien n'est téléchargé.
+behavior:
+  enabled: true
+  transformer: true
+  window: 30
+
+# Intégrité des trames (V3) : chaque message porte `seq` + `sig` (HMAC-SHA256) quand une clé est définie.
+# La clé est la même que EDGE_HMAC_KEY dans le .env du serveur. La variable d'environnement EDGE_HMAC_KEY du Pi
+# est prioritaire sur ce fichier (recommandé : ne pas versionner la clé). Sans clé : trames non signées (mode démo).
+# L'horloge du Pi doit être synchronisée (NTP) : le serveur rejette les trames de plus de 30 s. Voir docs/integrite-trames.md.
+# Générer une clé : python -c "import secrets; print(secrets.token_hex(32))"
+# security:
+#   hmac_key: "coller-ici-la-cle-hexadecimale"

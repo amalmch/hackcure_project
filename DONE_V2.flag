@@ -1,0 +1,9 @@
+Hospital Copilot V2 - termine
+Branche : feat/v2
+Date : 2026-10-11
+Etapes 0 a 10 cochees dans PROGRESS_V2.md
+Tests : 215 passes (dashboard 162, vision 17, edge 25, simulateur 11)
+Demo : Lancer la demo -> full_demo_v2 (docs/demo_v2.md)
+Bilan : MORNING_REPORT.md, section V2
+A faire avant le jury : recharger le credit de la cle Anthropic (voir BLOCKERS.md)
+Synchronisation Amal : dernier commit integre 12e1eb2 (voir AMAL_SYNC.md)

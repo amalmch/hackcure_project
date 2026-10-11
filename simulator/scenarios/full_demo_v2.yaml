@@ -1,0 +1,40 @@
+name: full_demo_v2
+description: Demo V2 complete (8 min) - admission par ambulance (GPS) puis questionnaire, fievre vraie (bilan clinique, biologique, confort), rappel de medicament, prediction de sepsis, panne de machine, chute, et leurs resolutions par les soignants.
+room: "104"
+duration: 480
+# Les etapes "noop" avec un champ "hook" sont les gestes des humains, joues par le pilote automatique (dashboard/app/demo_v2.py)
+# a travers l'API de la plateforme. Sans pilote (simulateur autonome), elles sont ignorees.
+steps:
+  # 1. Admission par ambulance : la patiente de la 104 sort, puis revient en ambulance (GPS simule, trajet accelere)
+  - { at: 0, action: night, value: false }
+  - { at: 0, action: noop, hook: demo_discharge, patient: patient_04 }
+  - { at: 6, action: noop, hook: demo_ambulance, patient: patient_04, emergency: trauma, severity: 2, route: proche, time_scale: 6, reason: "Chute a domicile, douleur de hanche droite, impotence fonctionnelle" }
+  # 2. Questionnaire d'admission sur tablette, des que la patiente est installee au lit
+  - { at: 92, action: noop, hook: demo_questionnaire, patient: patient_04, tries: 40 }
+  # 3. Fievre vraie en 101 : temperature centrale a 39 C -> medecin de garde, bilan clinique, bilan biologique, puis confort
+  - { at: 100, room: "101", action: env, tempC: 26.0, outdoorC: 17 }
+  - { at: 100, room: "101", action: trend, metric: temp, target: 39.0, duration: 30, hold: 1800 }
+  - { at: 105, room: "101", action: trend, metric: hr, target: 104, duration: 30, hold: 1800 }
+  - { at: 150, action: noop, hook: demo_fever_exam, room: "101" }
+  - { at: 168, action: noop, hook: demo_fever_labs, room: "101" }
+  # 4. Ordonnance de traitement -> plan d'administration -> rappel -> administration enregistree
+  - { at: 180, action: noop, hook: demo_treatment_order, patient: patient_01, room: "101", brand: Doliprane, dose: "1 g", indication: "Fievre - antipyretique", first_dose_in_s: 20 }
+  - { at: 216, action: noop, hook: demo_give_dose, room: "101" }
+  - { at: 224, action: noop, hook: demo_ack, room: "101", types: [fever] }
+  # 5. Prediction de sepsis en 102 : tension qui baisse, pouls et frequence respiratoire qui montent
+  - { at: 232, room: "102", action: trend, metric: sys, target: 90, duration: 55, hold: 1800 }
+  - { at: 232, room: "102", action: trend, metric: hr, target: 126, duration: 55, hold: 1800 }
+  - { at: 232, room: "102", action: trend, metric: rr, target: 26, duration: 55, hold: 1800 }
+  - { at: 240, room: "102", action: trend, metric: temp, target: 38.9, duration: 50, hold: 1800 }
+  # 5 bis. Panne de machine en 104 : le tensiometre se met en defaut -> risque equipement, infirmier, appareil de remplacement
+  - { at: 262, room: "104", action: device_fault, device: bp, code: sensor, label: "brassard deconnecte" }
+  - { at: 300, action: noop, hook: demo_ack, room: "104", types: [equipment_fault], tries: 20 }
+  - { at: 318, action: noop, hook: demo_ack, room: "102", types: [predicted_sepsis, news2_high, sepsis_trend], tries: 20 }
+  # 6. Chute en 103 : lever, marche, chute -> prise en charge par un infirmier
+  - { at: 326, room: "103", action: posture, posture: sitting_bed, activity: awake_bed, zone: bed }
+  - { at: 331, room: "103", action: posture, posture: standing, activity: out_of_bed, zone: floor }
+  - { at: 336, room: "103", action: posture, posture: walking, activity: out_of_bed, zone: floor }
+  - { at: 342, room: "103", action: fall }
+  - { at: 360, action: noop, hook: demo_ack, room: "103", types: [fall] }
+  # 7. Bien-etre psychologique bas en 104 (questionnaire) : le psychiatre passe voir la patiente
+  - { at: 372, action: noop, hook: demo_ack, room: "104", types: [psych_low_wellbeing, psych_alert], tries: 20 }

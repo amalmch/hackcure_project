@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suivi GPS de l'ambulance — Hospital Copilot</title>
+    <style>
+        body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #0f172a; color: #e2e8f0; font-size: 18px; }
+        header { background: #dc2626; padding: 16px 20px; font-weight: 700; font-size: 20px; }
+        main { padding: 20px; max-width: 520px; margin: 0 auto; }
+        .card { background: #1e293b; border-radius: 14px; padding: 18px; margin: 14px 0; }
+        .big { font-size: 34px; font-weight: 800; }
+        .muted { color: #94a3b8; font-size: 15px; }
+        button { width: 100%; font-size: 20px; font-weight: 700; padding: 16px; border-radius: 12px; border: 0; margin-top: 12px; color: #fff; background: #2563eb; }
+        button.stop { background: #475569; } button.arrived { background: #16a34a; }
+        .ok { color: #4ade80; } .warn { color: #fbbf24; } .err { color: #f87171; }
+    </style>
+</head>
+<body>
+    <header>🚑 Suivi GPS — <span id="amb">ambulance</span></header>
+    <main>
+        <div class="card"><div class="muted">Patient · chambre réservée</div><div id="who">…</div></div>
+        <div class="card"><div class="muted">Arrivée estimée</div><div class="big" id="eta">—</div><div class="muted" id="dist"></div></div>
+        <div class="card"><div class="muted">Position envoyée toutes les 2 secondes</div><div id="status" class="warn">En attente de l'autorisation de géolocalisation…</div><div class="muted" id="pos"></div>
+            <button id="start">▶ Démarrer le suivi</button><button id="arrived" class="arrived" style="display:none">✔ Arrivé à la clinique</button></div>
+        <p class="muted">La géolocalisation du navigateur exige HTTPS (ou localhost). Voir <code>docs/ambulance.md</code>.</p>
+    </main>
+    <script>
+        (async () => {
+            const token = location.pathname.split('/').pop(), $ = (id) => document.getElementById(id);
+            let last = null, timer = null, watch = null;
+            try { const i = await (await fetch(`/api/ambulances/track/${token}`)).json(); $('amb').textContent = i.ambulance; $('who').textContent = `${i.patient} · chambre ${i.room}`; }
+            catch (_) { $('status').className = 'err'; $('status').textContent = 'Mission introuvable.'; return; }
+            const send = async (arrived) => {
+                if (!last) return;
+                try {
+                    const r = await fetch(`/api/ambulances/track/${token}`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ lat: last.latitude, lon: last.longitude, speed_kmh: last.speed != null ? last.speed * 3.6 : null, accuracy_m: last.accuracy, arrived: !!arrived }) });
+                    const d = await r.json();
+                    if (d.status !== 'en_route') { $('status').className = 'ok'; $('status').textContent = d.status === 'arrived' || d.status === 'admitted' ? 'Arrivé — merci !' : `Mission ${d.status}.`; clearInterval(timer); if (watch != null) navigator.geolocation.clearWatch(watch); $('eta').textContent = '0 min'; return; }
+                    $('eta').textContent = `${Math.max(0, Math.round(d.eta_minutes))} min`; $('dist').textContent = `${(d.remaining_m / 1000).toFixed(1)} km restants`;
+                    $('status').className = 'ok'; $('status').textContent = 'Position transmise à la clinique.';
+                } catch (_) { $('status').className = 'err'; $('status').textContent = 'Réseau indisponible : nouvel essai dans 2 s.'; }
+            };
+            $('start').addEventListener('click', () => {
+                if (!navigator.geolocation) { $('status').className = 'err'; $('status').textContent = 'Géolocalisation non disponible sur cet appareil.'; return; }
+                $('start').style.display = 'none'; $('arrived').style.display = 'block';
+                watch = navigator.geolocation.watchPosition((p) => { last = p.coords; $('pos').textContent = `${last.latitude.toFixed(5)}, ${last.longitude.toFixed(5)} (± ${Math.round(last.accuracy)} m)`; },
+                    (e) => { $('status').className = 'err'; $('status').textContent = e.code === 1 ? 'Autorisation refusée : activez la localisation pour cette page (HTTPS requis).' : 'Position indisponible.'; },
+                    { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 });
+                timer = setInterval(() => send(false), 2000);
+            });
+            $('arrived').addEventListener('click', () => send(true));
+        })();
+    </script>
+</body>
+</html>

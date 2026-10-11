@@ -1,0 +1,8 @@
+name: iv_empty
+description: Chambre 103 - la poche de perfusion arrive en fin (< 50 ml), puis occlusion de la ligne.
+room: "103"
+duration: 40
+steps:
+  - { at: 0, action: iv_volume, volume: 70 }
+  - { at: 5, action: iv_volume, volume: 45 }
+  - { at: 20, action: occlusion, value: true }

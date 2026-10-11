@@ -1,0 +1,20 @@
+{% extends "_base.html" %}
+{% block title %}{{ r.title }} — {{ r.patient }}{% endblock %}
+{% block body %}
+<h2 class="title">{{ r.title }} {% if r.status == 'signed' %}<span class="stamp">Signé</span>{% else %}<span class="draft">Brouillon{% if r.ai_draft %} IA{% endif %}</span>{% endif %}</h2>
+<div class="meta">
+    <div><b>Patient :</b> {{ r.patient }} ({{ r.patient_code }})</div>
+    <div><b>Chambre :</b> {{ r.room }}</div>
+    <div><b>Auteur :</b> {{ r.author }}</div>
+    <div><b>Créé le :</b> {{ r.created_at | fmt }}</div>
+    <div><b>Signé le :</b> {{ r.signed_at | fmt }}</div>
+    <div><b>Admission :</b> #{{ r.admission_id }}</div>
+</div>
+{% if r.ai_draft and r.status != 'signed' %}<div class="warn">Brouillon rédigé par l'IA à partir du dossier : à relire, compléter et signer par un médecin.</div>{% endif %}
+<div class="content">{{ r.content_html | safe }}</div>
+<div class="signature">
+    <div class="box">Signature du médecin<br><br>{{ r.author }}</div>
+    <div class="box">&nbsp;</div>
+</div>
+{% endblock %}
+{% block footer %}Rapport n° {{ r.id }}{% endblock %}

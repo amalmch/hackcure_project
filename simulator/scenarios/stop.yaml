@@ -1,0 +1,16 @@
+name: stop
+description: Arrete le scenario en cours et remet les chambres au calme.
+room: "101"
+duration: 1
+steps:
+  - { at: 0, room: "101", action: recover }
+  - { at: 0, room: "102", action: recover }
+  - { at: 0, room: "103", action: recover }
+  - { at: 0, room: "104", action: recover }
+  - { at: 0, room: "101", action: clear_trends }
+  - { at: 0, room: "102", action: clear_trends }
+  - { at: 0, room: "103", action: clear_trends }
+  - { at: 0, room: "104", action: clear_trends }
+  - { at: 0, room: "103", action: occlusion, value: false }
+  - { at: 0, room: "103", action: iv_volume, volume: 480 }
+  - { at: 0, action: night, value: false }

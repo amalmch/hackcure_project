@@ -1,0 +1,18 @@
+{% extends "_base.html" %}
+{% block title %}{{ d.title }}{% endblock %}
+{% block body %}
+<h2 class="title">{{ d.title }} {% if d.ai %}<span class="draft">Synthèse IA</span>{% endif %}</h2>
+<div class="meta">
+    <div><b>Patient :</b> {{ patient.full_name }} ({{ patient.code }}), {{ patient.age }} ans</div>
+    <div><b>Date :</b> {{ d.date | fmt }}</div>
+    <div><b>Auteur :</b> {{ d.author or '—' }}</div>
+    <div><b>Service :</b> {{ d.service or '—' }}{% if d.facility %} — {{ d.facility }}{% endif %}</div>
+</div>
+<div class="content">{{ d.content_html | safe }}</div>
+{% if d.ai %}<p class="draft">Aide à la décision — validation médicale requise.</p>{% endif %}
+<div class="signature">
+    <div class="box">Médecin<br><br>&nbsp;</div>
+    <div class="box">Imprimé par<br><br>{{ user.name or user.username }}</div>
+</div>
+{% endblock %}
+{% block footer %}Dossier médical — {{ patient.code }} — document n° {{ d.id }}{% endblock %}

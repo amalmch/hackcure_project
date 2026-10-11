@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HackCure — Connexion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/platform.css">
+</head>
+<body class="login-page">
+    <main class="login-card">
+        <div class="logo" style="justify-content:center;margin-bottom:6px">
+            <span class="logo-icon">🏥</span>
+            <h1>HackCure</h1>
+        </div>
+        <p class="login-subtitle">Hospital Copilot — supervision de clinique</p>
+
+        <form id="login-form" autocomplete="on">
+            <label for="username">Identifiant</label>
+            <input id="username" name="username" type="text" required autofocus placeholder="ex. infirmier">
+            <label for="password">Mot de passe</label>
+            <input id="password" name="password" type="password" required placeholder="••••••••">
+            <button type="submit" class="btn btn-primary" id="login-btn">Se connecter</button>
+            <div id="login-error" class="login-error" hidden></div>
+        </form>
+
+        <details class="login-demo">
+            <summary>Comptes de démonstration</summary>
+            <p>Mot de passe commun : <code>hackcure2026</code> (variable <code>DEMO_PASSWORD</code>)</p>
+            <div class="login-demo-grid">
+                <button type="button" data-user="owner">👑 owner — Propriétaire</button>
+                <button type="button" data-user="medecin">🩺 medecin — Médecin généraliste</button>
+                <button type="button" data-user="medecin_garde">🚑 medecin_garde — Médecin de garde</button>
+                <button type="button" data-user="infirmier">💉 infirmier — Infirmier</button>
+                <button type="button" data-user="receptionniste">🛎️ receptionniste — Réceptionniste</button>
+                <button type="button" data-user="pharmacien">💊 pharmacien — Pharmacien</button>
+            </div>
+        </details>
+        <p class="login-footer">Données patients fictives · Les suggestions IA sont une aide à la décision validée par un soignant.</p>
+    </main>
+
+    <script>
+    (function () {
+        const form = document.getElementById('login-form');
+        const err = document.getElementById('login-error');
+        const next = new URLSearchParams(location.search).get('next') || '/';
+        async function submit(username, password) {
+            err.hidden = true;
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true; btn.textContent = 'Connexion…';
+            try {
+                const r = await fetch('/api/auth/login', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }), credentials: 'same-origin',
+                });
+                if (!r.ok) {
+                    const d = await r.json().catch(() => ({}));
+                    throw new Error(d.detail || 'Connexion refusée');
+                }
+                location.href = next;
+            } catch (e) {
+                err.textContent = e.message; err.hidden = false;
+                btn.disabled = false; btn.textContent = 'Se connecter';
+            }
+        }
+        form.addEventListener('submit', (ev) => {
+            ev.preventDefault();
+            submit(form.username.value.trim(), form.password.value);
+        });
+        document.querySelectorAll('.login-demo-grid button').forEach(b => {
+            b.addEventListener('click', () => {
+                form.username.value = b.dataset.user;
+                form.password.value = 'hackcure2026';
+                submit(b.dataset.user, 'hackcure2026');
+            });
+        });
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+name: vitals_resolves
+description: Un infirmier controle les constantes au lit du patient, corrige la cause (installation, traitement prescrit) et sort.
+room: "102"
+role: nurse
+resolves: [tachycardia, bradycardia, hypotension, hypertension, tachypnea, hypothermia]
+duration: 52
+steps:
+  - { at: 0, action: staff_enter, persons: 2 }
+  - { at: 10, action: clear_trends }
+  - { at: 10, action: posture, posture: lying_bed, activity: awake_bed, zone: bed }
+  - { at: 10, action: expression, expression: neutral, confidence: 0.8 }
+  - { at: 48, action: staff_leave }

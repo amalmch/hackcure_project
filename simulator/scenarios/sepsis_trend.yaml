@@ -1,0 +1,10 @@
+name: sepsis_trend
+description: Chambre 102 - derive progressive type sepsis (fievre, tachycardie, hypotension, polypnee) sur 2 minutes.
+room: "102"
+duration: 150
+steps:
+  - { at: 0, action: trend, metric: temp, target: 39.2, duration: 110, hold: 900 }
+  - { at: 0, action: trend, metric: hr, target: 128, duration: 100, hold: 900 }
+  - { at: 10, action: trend, metric: sys, target: 86, duration: 110, hold: 900 }
+  - { at: 10, action: trend, metric: rr, target: 27, duration: 90, hold: 900 }
+  - { at: 30, action: trend, metric: spo2, target: 91, duration: 90, hold: 900 }

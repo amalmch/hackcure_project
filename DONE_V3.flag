@@ -1,0 +1,7 @@
+Hospital Copilot V3 - conformite au cahier des charges
+Branche : feat/v2 (points de retour : tags v2-stable, v2-pre-conformite)
+Date : 2026-10-11
+Etapes 1 a 8 cochees dans PROGRESS_V3.md
+Tests : 263 passes (LLM_PROVIDER=mock, N8N_ENABLED=false), dont full_demo_v2
+Non execute : Docker (demon en erreur sur la machine), MQTT sur TLS, Raspberry Pi reel
+Bilan : MORNING_REPORT.md, section V3 (actif par defaut / a activer / verifie / non verifie)

@@ -1,0 +1,9 @@
+name: hypoglycemia_104
+description: Chambre 104 - hypoglycemie. La glycemie capillaire baisse progressivement (insuline, repas saute), tachycardie et malaise.
+room: "104"
+duration: 110
+steps:
+  - { at: 0, action: posture, posture: lying_bed, activity: awake_bed, zone: bed }
+  - { at: 5, action: trend, metric: glucose, target: 0.5, duration: 70, hold: 1800 }
+  - { at: 40, action: trend, metric: hr, target: 104, duration: 30, hold: 1800 }
+  - { at: 55, action: expression, expression: fear, confidence: 0.7 }

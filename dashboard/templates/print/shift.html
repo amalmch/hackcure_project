@@ -1,0 +1,17 @@
+{% extends "_base.html" %}
+{% block title %}Rapport de garde #{{ r.id }}{% endblock %}
+{% block body %}
+<h2 class="title">Rapport de garde {% if r.status == 'validated' %}<span class="stamp">Validé</span>{% else %}<span class="draft">Brouillon IA</span>{% endif %}</h2>
+<div class="meta">
+    <div><b>Période :</b> {{ r.shift_start | fmt }} → {{ r.shift_end | fmt }}</div>
+    <div><b>Rédigé par :</b> {{ r.author }}</div>
+    <div><b>Validé par :</b> {{ r.validated_by or '—' }}</div>
+    <div><b>Validé le :</b> {{ r.validated_at | fmt }}</div>
+</div>
+<div class="content">{{ r.content_html | safe }}</div>
+<div class="signature">
+    <div class="box">Infirmier(ère) responsable<br><br>{{ r.validated_by or '' }}</div>
+    <div class="box">Relève<br><br>&nbsp;</div>
+</div>
+{% endblock %}
+{% block footer %}Rapport de garde n° {{ r.id }}{% endblock %}

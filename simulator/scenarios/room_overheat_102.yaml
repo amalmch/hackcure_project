@@ -1,0 +1,6 @@
+name: room_overheat_102
+description: Chambre 102 - SIMPLE HAUSSE THERMIQUE. La chambre chauffe (29 C), la peau se rechauffe, la temperature centrale reste normale. Pas de medecin - l'EnvironmentAgent rafraichit puis reverifie.
+room: "102"
+duration: 120
+steps:
+  - { at: 0, action: env, tempC: 29.5, outdoorC: 17 }

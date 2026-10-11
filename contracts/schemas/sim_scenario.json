@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hackcure/sim_scenario.json",
+  "title": "hackcure/sim/scenario  (serveur -> simulateur)",
+  "type": "object",
+  "required": ["ts", "source", "name"],
+  "properties": {
+    "ts": { "type": "string" },
+    "source": { "type": "string" },
+    "name": { "enum": ["normal_night", "fall_demo", "sepsis_trend", "iv_empty", "nurse_resolves", "fever_101", "full_demo", "stop"] },
+    "room": { "type": ["string", "null"] },
+    "speed": { "type": ["number", "null"], "minimum": 0.1 }
+  },
+  "additionalProperties": true
+}

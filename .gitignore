@@ -7,6 +7,7 @@ env/
 venv/
 .venv/
 .env
+env.txt
 *.pt
 *.pth
 yolov8n-pose.pt
@@ -19,3 +20,29 @@ computer_vision/__pycache__/
 datasets/
 runs/
 *.mp4
+logs/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Le module source computer_vision/src/datasets/ ne doit pas etre ignore (seuls les jeux de donnees bruts le sont)
+!computer_vision/src/datasets/
+
+# V3 : certificats et clés privées (générés par scripts/make-cert)
+dashboard/certs/
+*.key
+*.pem
+
+# Node / Mobile / Big files
+node_modules/
+.expo/
+.expo-shared/
+dist/
+web-build/
+*.zip
+*.cache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

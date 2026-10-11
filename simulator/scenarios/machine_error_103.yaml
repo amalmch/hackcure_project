@@ -1,0 +1,6 @@
+name: machine_error_103
+description: Chambre 103 - PANNE DE MACHINE. La pompe a perfusion se met en defaut (moteur) - risque equipement, appareil signale dans la chambre et en salle Equipements, infirmier prevenu.
+room: "103"
+duration: 60
+steps:
+  - { at: 4, action: device_fault, device: iv_pump, code: motor, label: "defaut moteur" }

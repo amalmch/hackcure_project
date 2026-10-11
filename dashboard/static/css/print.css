@@ -1,0 +1,32 @@
+/* Pages d'impression (ordonnance, rapport médecin, rapport de garde) */
+:root { --ink: #111827; --muted: #6b7280; --line: #d1d5db; --accent: #1d4ed8; }
+* { box-sizing: border-box; }
+body { font-family: Georgia, "Times New Roman", serif; color: var(--ink); background: #e5e7eb; margin: 0; }
+.sheet { width: 210mm; min-height: 297mm; margin: 16px auto; background: #fff; padding: 18mm 20mm; box-shadow: 0 2px 12px rgba(0,0,0,.2); position: relative; }
+.toolbar { width: 210mm; margin: 12px auto 0; display: flex; gap: 8px; font-family: Arial, sans-serif; }
+.toolbar button, .toolbar a { padding: 8px 14px; border: 1px solid var(--line); background: #fff; border-radius: 6px; cursor: pointer; text-decoration: none; color: var(--ink); font-size: 13px; }
+.toolbar button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+header.letterhead { display: flex; justify-content: space-between; border-bottom: 2px solid var(--accent); padding-bottom: 8px; margin-bottom: 18px; }
+header.letterhead h1 { margin: 0; font-size: 20px; color: var(--accent); }
+header.letterhead .sub { color: var(--muted); font-size: 12px; }
+h2.title { font-size: 18px; margin: 10px 0 14px; text-transform: uppercase; letter-spacing: 1px; }
+.meta { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; font-size: 13px; margin-bottom: 16px; }
+.meta b { font-weight: 600; }
+table.lines { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+table.lines th, table.lines td { border: 1px solid var(--line); padding: 7px 8px; text-align: left; vertical-align: top; }
+table.lines th { background: #f3f4f6; font-weight: 600; }
+.warn { border: 2px solid #b91c1c; color: #7f1d1d; background: #fef2f2; padding: 8px 10px; font-weight: 600; margin: 10px 0; font-family: Arial, sans-serif; font-size: 13px; }
+.content { font-size: 13.5px; line-height: 1.55; white-space: normal; }
+.content h1 { font-size: 17px; } .content h2 { font-size: 15px; margin-top: 14px; } .content h3 { font-size: 13.5px; }
+.content ul { padding-left: 18px; }
+.signature { margin-top: 36px; display: flex; justify-content: space-between; font-size: 13px; }
+.signature .box { border-top: 1px solid var(--line); width: 46%; padding-top: 6px; }
+.stamp { display: inline-block; border: 2px solid #15803d; color: #15803d; padding: 4px 10px; font-weight: 700; transform: rotate(-4deg); font-family: Arial, sans-serif; }
+.draft { display: inline-block; border: 2px dashed #b45309; color: #b45309; padding: 4px 10px; font-weight: 700; font-family: Arial, sans-serif; }
+footer.foot { position: absolute; bottom: 12mm; left: 20mm; right: 20mm; font-size: 10.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 6px; display: flex; justify-content: space-between; }
+@media print {
+    body { background: #fff; }
+    .sheet { box-shadow: none; margin: 0; width: auto; min-height: auto; padding: 12mm 14mm; }
+    .toolbar, .no-print { display: none !important; }
+    @page { size: A4; margin: 10mm; }
+}

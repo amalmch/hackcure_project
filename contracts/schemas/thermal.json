@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hackcure/thermal.json",
+  "title": "hackcure/room/{room}/thermal (1 Hz)",
+  "type": "object",
+  "required": ["ts", "source", "skinTempC", "maxTempC", "calibrated"],
+  "properties": {
+    "ts": { "type": "string" },
+    "source": { "type": "string" },
+    "skinTempC": { "type": "number", "minimum": 20, "maximum": 45 },
+    "maxTempC": { "type": "number", "minimum": 0, "maximum": 100 },
+    "calibrated": { "type": "boolean" }
+  },
+  "additionalProperties": true
+}

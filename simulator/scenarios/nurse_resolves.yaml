@@ -1,0 +1,12 @@
+name: nurse_resolves
+description: Chambre 104 - un infirmier entre, releve et reinstalle le patient, puis sort. Le FollowUpAgent re-verifie.
+room: "104"
+duration: 45
+steps:
+  - { at: 0, action: staff_enter, persons: 2 }
+  - { at: 8, action: posture, posture: sitting_bed, activity: awake_bed, zone: bed, confidence: 0.9 }
+  - { at: 14, action: recover }
+  - { at: 14, action: clear_trends }
+  - { at: 14, action: trend, metric: hr, target: 84, duration: 20, hold: 300 }
+  - { at: 14, action: trend, metric: sys, target: 118, duration: 20, hold: 300 }
+  - { at: 22, action: staff_leave }

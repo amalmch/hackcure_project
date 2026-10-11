@@ -1,0 +1,8 @@
+name: seizure_103
+description: Chambre 103 - patient epileptique. La camera detecte des mouvements rythmiques anormaux (variance des points cles du squelette) - crise imminente.
+room: "103"
+duration: 60
+steps:
+  - { at: 0, action: posture, posture: lying_bed, activity: awake_bed, zone: bed }
+  - { at: 8, action: seizure, level: 1.0 }
+  - { at: 8, action: trend, metric: hr, target: 112, duration: 15, hold: 600 }

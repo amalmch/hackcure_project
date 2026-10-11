@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>{% block title %}HackCure{% endblock %}</title>
+<link rel="stylesheet" href="/static/css/print.css">
+</head>
+<body>
+<div class="toolbar no-print">
+    <button class="primary" onclick="window.print()">🖨️ Imprimer / PDF</button>
+    <a href="/">← Retour au tableau de bord</a>
+</div>
+<div class="sheet">
+    <header class="letterhead">
+        <div><h1>🏥 Clinique HackCure</h1><div class="sub">12, avenue de la Santé · Tél. 01 23 45 67 89 · Hospital Copilot</div></div>
+        <div class="sub" style="text-align:right">Édité le {{ now.strftime('%d/%m/%Y %H:%M') }}<br>par {{ user.name or user.username }}</div>
+    </header>
+    {% block body %}{% endblock %}
+    <footer class="foot"><span>Données patients fictives — démonstration HackCure</span><span>{% block footer %}{% endblock %}</span></footer>
+</div>
+</body>
+</html>

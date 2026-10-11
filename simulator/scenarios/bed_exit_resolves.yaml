@@ -1,0 +1,12 @@
+name: bed_exit_resolves
+description: Un infirmier raccompagne le patient jusqu'a son lit et le reinstalle, puis sort.
+room: "101"
+role: nurse
+resolves: [unaccompanied_bed_exit, bed_exit, toilet_too_long, patient_out_of_room]
+duration: 52
+steps:
+  - { at: 0, action: staff_enter, persons: 2 }
+  - { at: 8, action: posture, posture: walking, activity: out_of_bed, zone: floor }
+  - { at: 18, action: posture, posture: sitting_bed, activity: awake_bed, zone: bed }
+  - { at: 28, action: posture, posture: lying_bed, activity: awake_bed, zone: bed }
+  - { at: 48, action: staff_leave }

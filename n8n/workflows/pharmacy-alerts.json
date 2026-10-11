@@ -1,0 +1,372 @@
+{
+  "name": "pharmacy-alerts",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "20d63966-4e1e-56e5-9c0e-7bb7f4bf418f",
+      "name": "Cron quotidien 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pharmacy-alerts",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "7e98a867-613c-5911-8ad9-6b3825a04458",
+      "name": "Webhook pharmacy-alerts",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_WEBHOOK__",
+          "name": "Hospital Copilot — Webhook (X-Hospital-Secret)"
+        }
+      },
+      "webhookId": "4de2c1de-1d32-5793-b8b2-6a9fb537305f"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configuration : l'événement de la plateforme est prioritaire ; sinon valeurs posées à l'import (n8n/setup_n8n.py).\nconst CFG = { platform_url: '__PLATFORM_URL__', telegram_chat_id: '__TELEGRAM_CHAT_ID__', llm_model: '__LLM_MODEL__' };\nconst DEF = { platform_url: 'http://localhost:8000', telegram_chat_id: '', llm_model: 'claude-sonnet-5-5' };\nconst cfg = (k, v) => v || (String(CFG[k]).startsWith('__') ? DEF[k] : CFG[k]);\n// n8n (Node) résout « localhost » en IPv6 (::1) alors que la plateforme écoute en IPv4 : on force 127.0.0.1.\nconst platformUrl = (v) => cfg('platform_url', v).replace(/\\/$/, '').replace('//localhost', '//127.0.0.1');\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst body = $input.first().json.body || {};   // vide quand le déclencheur est le Cron\nreturn [{ json: {\n  started_at: Date.now(), room: '',\n  trigger: body.event ? `bouton de la plateforme (${body.triggered_by || '?'})` : 'Cron quotidien 08:00',\n  platform_url: platformUrl(body.platform_url),\n  chat_id: cfg('telegram_chat_id', body.telegram_chat_id),\n} }];\n"
+      },
+      "id": "6d8b19b5-5b9c-5e94-b369-f16d4d3e5a62",
+      "name": "Contexte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.platform_url }}/api/pharmacy/alerts?days=30",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "a1e216ba-8465-5db6-9837-2e9ec730a80b",
+      "name": "Plateforme : alertes pharmacie",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Contexte').first().json;\nconst d = $input.first().json || {};\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst low = d.low_stock || [], exp = d.expiring || [];\nconst day = (s) => String(s || '').slice(0, 10).split('-').reverse().join('/');\nconst lines = ['💊 <b>Alertes pharmacie</b>'];\nif (low.length) lines.push('', `<b>Stock sous le seuil (${low.length})</b>`, ...low.slice(0, 15).map((m) => `• ${esc(m.dci)} (${esc(m.brand)}) : ${m.stock} / seuil ${m.threshold}`));\nif (exp.length) lines.push('', `<b>Péremption sous 30 jours (${exp.length})</b>`, ...exp.slice(0, 15).map((m) => `• ${esc(m.dci)} (${esc(m.brand)}) : ${day(m.expiry)}`));\nlines.push('', `${ctx.platform_url}/`);\nreturn [{ json: { ...ctx, has_alerts: low.length + exp.length > 0, low: low.length, expiring: exp.length, telegram_text: lines.join('\\n') } }];\n"
+      },
+      "id": "d009d0d4-3596-5802-8ee9-6be2dd7a5cb4",
+      "name": "Composer le message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d16fb4b7-0f7b-5d07-8d1b-5a66dc009869",
+              "leftValue": "={{ $json.has_alerts }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "98263ecb-296d-5c12-88e4-1f9233740d1e",
+      "name": "Des alertes ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Composer le message').first().json.chat_id }}",
+        "text": "={{ $('Composer le message').first().json.telegram_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "b731c39c-77d8-524a-a745-3ccdffca80a9",
+      "name": "Telegram : pharmacien",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        100
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED_TELEGRAM__",
+          "name": "Hospital Copilot — Telegram"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "6c0ace82-0e7d-55df-96d3-f8bbe264f67c"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Composer le message').first().json.platform_url }}/api/agents/log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "agent",
+              "value": "pharmacy-alerts"
+            },
+            {
+              "name": "room",
+              "value": "={{ $('Composer le message').first().json.room || '' }}"
+            },
+            {
+              "name": "input",
+              "value": "=déclencheur : {{ $('Composer le message').first().json.trigger }} — GET /api/pharmacy/alerts?days=30"
+            },
+            {
+              "name": "reasoning",
+              "value": "={{ $('Composer le message').first().json.low }} médicament(s) sous le seuil de stock, {{ $('Composer le message').first().json.expiring }} avec péremption sous 30 jours."
+            },
+            {
+              "name": "output",
+              "value": "=Telegram au pharmacien {{ $json.ok ? 'envoyé' : 'non envoyé (' + ($json.error || 'Telegram non configuré') + ')' }}"
+            },
+            {
+              "name": "status",
+              "value": "ok"
+            },
+            {
+              "name": "duration_ms",
+              "value": "={{ Date.now() - ($('Composer le message').first().json.started_at || Date.now()) }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "f342123a-5f72-5b3e-894a-0feec39b04e9",
+      "name": "Journal : alertes envoyées",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Composer le message').first().json.platform_url }}/api/agents/log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "agent",
+              "value": "pharmacy-alerts"
+            },
+            {
+              "name": "room",
+              "value": "={{ $('Composer le message').first().json.room || '' }}"
+            },
+            {
+              "name": "input",
+              "value": "=déclencheur : {{ $('Composer le message').first().json.trigger }} — GET /api/pharmacy/alerts?days=30"
+            },
+            {
+              "name": "reasoning",
+              "value": "Aucun stock sous le seuil, aucune péremption sous 30 jours."
+            },
+            {
+              "name": "output",
+              "value": "pas de message envoyé"
+            },
+            {
+              "name": "status",
+              "value": "ok"
+            },
+            {
+              "name": "duration_ms",
+              "value": "={{ Date.now() - ($('Composer le message').first().json.started_at || Date.now()) }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "f6a2b493-59c2-5f5d-a1d9-9b8d241e23fa",
+      "name": "Journal : aucune alerte",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        500
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Cron quotidien 08:00": {
+      "main": [
+        [
+          {
+            "node": "Contexte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook pharmacy-alerts": {
+      "main": [
+        [
+          {
+            "node": "Contexte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexte": {
+      "main": [
+        [
+          {
+            "node": "Plateforme : alertes pharmacie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plateforme : alertes pharmacie": {
+      "main": [
+        [
+          {
+            "node": "Composer le message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Composer le message": {
+      "main": [
+        [
+          {
+            "node": "Des alertes ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram : pharmacien": {
+      "main": [
+        [
+          {
+            "node": "Journal : alertes envoyées",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Des alertes ?": {
+      "main": [
+        [
+          {
+            "node": "Telegram : pharmacien",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Journal : aucune alerte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

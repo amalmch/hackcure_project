@@ -1,0 +1,321 @@
+{
+  "name": "vitals-trend",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vitals-trend",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "93d2b3fe-1d0f-5512-8978-3692af84f392",
+      "name": "Webhook vitals-trend",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_WEBHOOK__",
+          "name": "Hospital Copilot — Webhook (X-Hospital-Secret)"
+        }
+      },
+      "webhookId": "95e8f804-e7e1-5e0b-a64f-a51c4c7ff216"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configuration : l'événement de la plateforme est prioritaire ; sinon valeurs posées à l'import (n8n/setup_n8n.py).\nconst CFG = { platform_url: '__PLATFORM_URL__', telegram_chat_id: '__TELEGRAM_CHAT_ID__', llm_model: '__LLM_MODEL__' };\nconst DEF = { platform_url: 'http://localhost:8000', telegram_chat_id: '', llm_model: 'claude-sonnet-5-5' };\nconst cfg = (k, v) => v || (String(CFG[k]).startsWith('__') ? DEF[k] : CFG[k]);\n// n8n (Node) résout « localhost » en IPv6 (::1) alors que la plateforme écoute en IPv4 : on force 127.0.0.1.\nconst platformUrl = (v) => cfg('platform_url', v).replace(/\\/$/, '').replace('//localhost', '//127.0.0.1');\n\n// Consigne de l'agent VitalsAgent — source : dashboard/app/agents/specs.py\nconst SYSTEM = \"Tu es un assistant d'aide à la décision d'une clinique (Hospital Copilot). Règles : n'invente JAMAIS de valeur ; cite les valeurs fournies ; respecte strictement les allergies et les traitements en cours ; tu ne poses pas de diagnostic et tu ne prescris rien : tu expliques, synthétises et suggères, un soignant valide. La détection et la sévérité sont déjà fixées par des règles déterministes : ne les modifie pas. Réponds en français, UNIQUEMENT par un objet JSON valide, sans texte autour et sans balise Markdown.\\nLe VitalsAgent vient de lever une alerte sur une constante (seuils déterministes, adaptés au patient). À partir des constantes actuelles, de leur variation sur 10 minutes et du NEWS2, rédige une lecture de tendance de 2 phrases au plus (ce qui monte, ce qui baisse, depuis quand) et 2 ou 3 points à surveiller. Cite les valeurs. N'interprète pas en diagnostic.\";\nconst FORMAT = \"{\\\"reading\\\": \\\"2 phrases au plus\\\", \\\"watch\\\": [\\\"point à surveiller\\\"]}\";\n\nconst body = $input.first().json.body || {};\nif (!body.ref) throw new Error('événement vitals-trend sans référence');\nconst context = body.context || {};\nconst model = cfg('llm_model', body.llm_model);\nconst user = `Contexte (JSON) :\\n${JSON.stringify(context, null, 1)}\\n\\nFormat exact attendu :\\n${FORMAT}`;\nreturn [{ json: {\n  started_at: Date.now(), workflow: 'vitals-trend', ref: String(body.ref), room: body.room || '', risk_id: body.risk_id ?? null,\n  platform_url: platformUrl(body.platform_url), chat_id: cfg('telegram_chat_id', body.telegram_chat_id), model, context,\n  request: { model, max_tokens: 4000, system: SYSTEM, messages: [{ role: 'user', content: user }] },\n} }];\n"
+      },
+      "id": "13a760d9-81d6-5cd1-83a1-4d80797bf82d",
+      "name": "Construire le prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.platform_url }}/api/agents/log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "agent",
+              "value": "vitals-trend"
+            },
+            {
+              "name": "room",
+              "value": "={{ $json.room }}"
+            },
+            {
+              "name": "input",
+              "value": "=webhook vitals-trend — Lecture de la tendance des constantes ({{ $json.ref }})"
+            },
+            {
+              "name": "reasoning",
+              "value": "=Contexte reçu de VitalsAgent (détection et sévérité déterministes). Appel de l'API Anthropic ({{ $json.model }})."
+            },
+            {
+              "name": "output",
+              "value": "appel Claude en cours"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "b5a06fd6-6f57-523c-a6a3-2692d4405b5c",
+      "name": "Journal : événement reçu",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "085168eb-3d8e-5ac3-ab39-81c49bb27890",
+      "name": "Claude : Lecture de la tendance des constantes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_ANTHROPIC__",
+          "name": "Hospital Copilot — Anthropic (x-api-key)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrait l'objet JSON de la réponse Anthropic et vérifie les clés obligatoires.\nconst REQUIRED = [\"reading\"];\nconst ctx = $('Construire le prompt').first().json;\nconst res = $input.first().json;\nlet result = null, error = null;\ntry {\n  if (!res || res.error) throw new Error(typeof (res || {}).error === 'string' ? res.error : ((res || {}).error || {}).message || 'appel Anthropic en échec');\n  const text = (res.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');\n  if (!text) throw new Error('réponse vide');\n  if (res.stop_reason === 'max_tokens') throw new Error('réponse tronquée (max_tokens)');\n  const m = text.match(/\\{[\\s\\S]*\\}/);\n  result = JSON.parse(m ? m[0] : text);\n  const missing = REQUIRED.filter((k) => result[k] === undefined || result[k] === null || result[k] === '' || (Array.isArray(result[k]) && !result[k].length));\n  if (missing.length) throw new Error('clé(s) manquante(s) : ' + missing.join(', '));\n} catch (e) { error = e.message; result = null; }\nconst fallback = result === null;\nreturn [{ json: {\n  platform_url: ctx.platform_url, chat_id: ctx.chat_id, fallback, error,\n  // en secours, le contexte repart vers la plateforme : elle construit la réponse déterministe de l'agent\n  payload: { workflow: ctx.workflow, ref: ctx.ref, result, context: fallback ? ctx.context : null, fallback, error, model: (res && res.model) || ctx.model, anthropic_id: (res && res.id) || null,\n             room: ctx.room || null, risk_id: ctx.risk_id, duration_ms: Date.now() - ctx.started_at },\n} }];\n"
+      },
+      "id": "4ee84d83-ffe4-5d31-b7b9-11a6d7fcc8fe",
+      "name": "Valider le JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.platform_url }}/api/agents/result",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "8a5365b0-8756-5555-8632-56b2ec8ded07",
+      "name": "Plateforme : résultat pour VitalsAgent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e5010a95-883a-503d-b651-2c561d55f0f9",
+              "leftValue": "={{ !!$json.telegram_text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "b124f2c6-0f9a-56c2-b940-93fa3ba7a0f6",
+      "name": "Message à envoyer ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Valider le JSON').first().json.chat_id }}",
+        "text": "={{ $json.telegram_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "7412e371-c51c-5b77-903c-2c59838b379c",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1440,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED_TELEGRAM__",
+          "name": "Hospital Copilot — Telegram"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "f57076b1-0374-54d2-b05b-e6c36fee8ada"
+    }
+  ],
+  "connections": {
+    "Webhook vitals-trend": {
+      "main": [
+        [
+          {
+            "node": "Construire le prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire le prompt": {
+      "main": [
+        [
+          {
+            "node": "Journal : événement reçu",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Claude : Lecture de la tendance des constantes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude : Lecture de la tendance des constantes": {
+      "main": [
+        [
+          {
+            "node": "Valider le JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valider le JSON": {
+      "main": [
+        [
+          {
+            "node": "Plateforme : résultat pour VitalsAgent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plateforme : résultat pour VitalsAgent": {
+      "main": [
+        [
+          {
+            "node": "Message à envoyer ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message à envoyer ?": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

@@ -1,0 +1,13 @@
+name: fever_resolves
+description: Le medecin de garde examine le patient febrile ; antipyretique selon l'ordonnance, la temperature centrale redescend, surveillance.
+room: "101"
+role: duty_doctor
+resolves: [fever]
+duration: 58
+steps:
+  - { at: 0, action: staff_enter, persons: 2 }
+  - { at: 12, action: clear_trends }
+  - { at: 12, action: trend, metric: temp, target: 37.4, duration: 28, hold: 900 }
+  - { at: 12, action: trend, metric: hr, target: 84, duration: 28, hold: 300 }
+  - { at: 20, action: expression, expression: neutral, confidence: 0.8 }
+  - { at: 54, action: staff_leave }

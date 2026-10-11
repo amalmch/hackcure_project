@@ -1,0 +1,12 @@
+name: iv_resolves
+description: Un infirmier leve l'occlusion de la ligne et change la poche de perfusion, puis sort.
+room: "103"
+role: nurse
+resolves: [iv_empty, iv_occlusion]
+duration: 52
+steps:
+  - { at: 0, action: staff_enter, persons: 2 }
+  - { at: 12, action: occlusion, value: false }
+  - { at: 20, action: iv_volume, volume: 500 }
+  - { at: 20, action: device_status, device: iv_pump, status: running }
+  - { at: 48, action: staff_leave }

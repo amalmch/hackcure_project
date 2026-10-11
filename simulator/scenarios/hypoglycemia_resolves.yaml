@@ -1,0 +1,13 @@
+name: hypoglycemia_resolves
+description: Un infirmier controle la glycemie capillaire, resucre le patient selon le protocole et recontrole a 15 minutes.
+room: "104"
+role: nurse
+resolves: [predicted_glycemia]
+duration: 54
+steps:
+  - { at: 0, action: staff_enter, persons: 2 }
+  - { at: 10, action: clear_trends }
+  - { at: 10, action: trend, metric: glucose, target: 1.05, duration: 28, hold: 900 }
+  - { at: 10, action: trend, metric: hr, target: 80, duration: 28, hold: 300 }
+  - { at: 20, action: expression, expression: neutral, confidence: 0.8 }
+  - { at: 50, action: staff_leave }

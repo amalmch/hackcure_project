@@ -1,0 +1,14 @@
+name: sepsis_resolves
+description: Le medecin de garde applique le protocole sepsis (bilan, remplissage, antibiotherapie) ; les constantes se corrigent, surveillance rapprochee.
+room: "102"
+role: duty_doctor
+resolves: [sepsis_trend, news2_high, predicted_sepsis, predicted_deterioration]
+duration: 62
+steps:
+  - { at: 0, action: staff_enter, persons: 3 }
+  - { at: 10, action: clear_trends }
+  - { at: 10, action: trend, metric: sys, target: 118, duration: 30, hold: 900 }
+  - { at: 10, action: trend, metric: hr, target: 88, duration: 30, hold: 900 }
+  - { at: 10, action: trend, metric: rr, target: 17, duration: 30, hold: 900 }
+  - { at: 10, action: trend, metric: temp, target: 37.3, duration: 35, hold: 900 }
+  - { at: 58, action: staff_leave }

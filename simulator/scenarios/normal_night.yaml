@@ -1,0 +1,11 @@
+name: normal_night
+description: Nuit calme - tous les patients dorment, lumieres eteintes, constantes stables.
+room: "102"
+duration: 60
+steps:
+  - { at: 0, action: night, value: true }
+  - { at: 0, action: sleep_all }
+  - { at: 0, room: "101", action: equipment, equipment: light, state: "off" }
+  - { at: 0, room: "102", action: equipment, equipment: light, state: "off" }
+  - { at: 0, room: "103", action: equipment, equipment: light, state: "off" }
+  - { at: 0, room: "104", action: equipment, equipment: light, state: "off" }

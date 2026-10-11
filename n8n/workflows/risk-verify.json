@@ -1,0 +1,644 @@
+{
+  "name": "risk-verify",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "staff-left",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "0ab256be-b23c-517b-aebe-522bbaa866eb",
+      "name": "Webhook staff-left",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_WEBHOOK__",
+          "name": "Hospital Copilot — Webhook (X-Hospital-Secret)"
+        }
+      },
+      "webhookId": "98c56932-5273-5bab-bfa2-95fbd00ca4d5"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configuration : l'événement de la plateforme est prioritaire ; sinon valeurs posées à l'import (n8n/setup_n8n.py).\nconst CFG = { platform_url: '__PLATFORM_URL__', telegram_chat_id: '__TELEGRAM_CHAT_ID__', llm_model: '__LLM_MODEL__' };\nconst DEF = { platform_url: 'http://localhost:8000', telegram_chat_id: '', llm_model: 'claude-sonnet-5-5' };\nconst cfg = (k, v) => v || (String(CFG[k]).startsWith('__') ? DEF[k] : CFG[k]);\n// n8n (Node) résout « localhost » en IPv6 (::1) alors que la plateforme écoute en IPv4 : on force 127.0.0.1.\nconst platformUrl = (v) => cfg('platform_url', v).replace(/\\/$/, '').replace('//localhost', '//127.0.0.1');\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst body = $input.first().json.body || {};\nconst ids = (body.risk_ids || []).map(Number).filter(Boolean);\nif (!body.room || !ids.length) throw new Error('événement staff-left sans chambre ou sans risque');\nreturn [{ json: {\n  started_at: Date.now(),\n  room: String(body.room), risk_ids: ids, risk_id: ids[0], risks: body.risks || [],\n  patient: body.patient || {}, duration_s: body.duration_s ?? null,\n  recheck_seconds: Number(body.recheck_seconds) || 120,\n  platform_url: platformUrl(body.platform_url),\n  chat_id: cfg('telegram_chat_id', body.telegram_chat_id),\n  model: cfg('llm_model', body.llm_model),\n} }];\n"
+      },
+      "id": "44822f85-3ca9-5a43-973f-b83fd68c786c",
+      "name": "Contexte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Contexte').first().json.platform_url }}/api/agents/log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "agent",
+              "value": "risk-verify"
+            },
+            {
+              "name": "room",
+              "value": "={{ $('Contexte').first().json.room || '' }}"
+            },
+            {
+              "name": "input",
+              "value": "=webhook staff-left : le personnel a quitté la chambre {{ $json.room }} (risques {{ $json.risk_ids.join(', ') }})"
+            },
+            {
+              "name": "reasoning",
+              "value": "=Attente de {{ $json.recheck_seconds }} s (2 min simulées) avant de relire l'état réel de la chambre."
+            },
+            {
+              "name": "output",
+              "value": "re-vérification planifiée"
+            },
+            {
+              "name": "status",
+              "value": "ok"
+            },
+            {
+              "name": "duration_ms",
+              "value": "={{ Date.now() - ($('Contexte').first().json.started_at || Date.now()) }}"
+            },
+            {
+              "name": "risk_id",
+              "value": "={{ $('Contexte').first().json.risk_id }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "8b590a3a-45b8-59d5-a29e-c93b3e251c50",
+      "name": "Journal : sortie du personnel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.recheck_seconds }}",
+        "unit": "seconds"
+      },
+      "id": "8a05f5ce-1449-5ff3-a3a0-8d844eff46c2",
+      "name": "Attendre 2 min",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        300
+      ],
+      "webhookId": "7d2626ed-0cab-5b2d-a22c-375ec27a938f"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Contexte').first().json.platform_url }}/api/rooms/{{ $('Contexte').first().json.room }}/state",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "2434f9e5-1241-5e7c-9d05-0f26c659a072",
+      "name": "Plateforme : état de la chambre",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Contexte').first().json;\nconst state = $input.first().json || {};\n// Seuls les risques encore ouverts et délégués à ce workflow sont re-vérifiés\nconst risks = (state.open_risks || []).filter((r) => ctx.risk_ids.includes(Number(r.id)));\nif (!risks.length) return [];\n\nconst context = {\n  chambre: ctx.room,\n  patient: { nom: ctx.patient.full_name, age: ctx.patient.age, allergies: ctx.patient.allergies, antecedents: ctx.patient.history },\n  duree_de_la_visite_s: ctx.duration_s,\n  etat_actuel: { posture: state.posture, activite: state.activity, zone: state.zone, expression: state.expression, personnes: state.persons, temperature_cutanee_c: state.skinTempC },\n  constantes_actuelles: state.vitals || {},\n  environnement: state.env || {},\n  risques_a_verifier: risks.map((r) => ({ risk_id: r.id, type: r.type, libelle: r.type_label, titre: r.title, severite: r.severity, explication: r.explanation, controle_deterministe: r.auto_check })),\n};\nconst system = [\n  \"Tu es l'assistant de vérification d'une clinique (Hospital Copilot). Le personnel vient de quitter la chambre : tu dois dire, pour chaque risque, s'il est résolu d'après l'ÉTAT ACTUEL mesuré.\",\n  \"Règles : n'invente aucune valeur ; cite les valeurs actuelles (posture, activité, constantes) dans ta justification ; en cas de doute, le risque n'est PAS résolu.\",\n  \"Réponds en français, UNIQUEMENT par un objet JSON valide, sans texte autour et sans balise Markdown.\",\n].join('\\n');\nconst user = `Contexte (JSON) :\\n${JSON.stringify(context, null, 1)}\\n\\nFormat exact : {\"verdicts\": [{\"risk_id\": 0, \"resolved\": true, \"justification\": \"1 à 2 phrases courtes (300 caractères au plus) citant les valeurs\"}]}`;\nreturn [{ json: { risks, state_summary: context.etat_actuel, vitals: context.constantes_actuelles, request: { model: ctx.model, max_tokens: 8000, system, messages: [{ role: 'user', content: user }] } } }];\n"
+      },
+      "id": "ac9b835b-916e-5640-80b7-f08b93037ccd",
+      "name": "Construire le prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "7832f1d7-c8d7-54b1-a9fc-2e5663a2783d",
+      "name": "Claude : risque résolu ?",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_ANTHROPIC__",
+          "name": "Hospital Copilot — Anthropic (x-api-key)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrait l'objet JSON de la réponse Anthropic (content[].text) ; lève une erreur si absent ou invalide.\nfunction parseClaude(res) {\n  if (!res || res.error) throw new Error(typeof (res || {}).error === 'string' ? res.error : ((res || {}).error || {}).message || 'appel Anthropic en échec');\n  const text = (res.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');\n  if (!text) throw new Error('réponse vide');\n  const m = text.match(/\\{[\\s\\S]*\\}/);\n  return JSON.parse(m ? m[0] : text);\n}\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst ctx = $('Contexte').first().json;\nconst prep = $('Construire le prompt').first().json;\nconst res = $input.first().json;\nlet verdicts = [], error = null;\ntry {\n  const out = parseClaude(res);\n  verdicts = Array.isArray(out.verdicts) ? out.verdicts : [];\n  if (!verdicts.length) throw new Error('aucun verdict');\n} catch (e) { error = e.message; }\n\nreturn prep.risks.map((r) => {\n  const v = verdicts.find((x) => Number(x.risk_id) === Number(r.id));\n  const check = r.auto_check || { ok: false, detail: 'contrôle indisponible' };\n  const fallback = !v || typeof v.resolved !== 'boolean';\n  // Garde-fou : jamais « résolu » si le contrôle déterministe de la plateforme échoue ; sans réponse du LLM, seul ce contrôle décide.\n  const resolved = fallback ? check.ok === true : (v.resolved === true && check.ok === true);\n  let justification = fallback ? `Réponse de secours (LLM indisponible${error ? ' : ' + error : ''}) — contrôle déterministe : ${check.detail}.` : String(v.justification || '').trim();\n  if (!fallback && v.resolved === true && !check.ok) justification += ` (Contrôle déterministe en échec : ${check.detail} — risque maintenu.)`;\n  const head = resolved ? `✅ <b>Résolu et vérifié</b> — ${esc(r.title)}` : `⚠️ <b>Risque persistant après visite</b> — ${esc(r.title)}`;\n  return { json: {\n    started_at: ctx.started_at, risk_id: r.id, room: ctx.room, platform_url: ctx.platform_url, chat_id: ctx.chat_id,\n    resolved, fallback, justification, title: r.title, model_used: (res && res.model) || ctx.model, anthropic_id: (res && res.id) || null,\n    body: { verified: true, justification, reason: justification, source: 'n8n:risk-verify' },\n    telegram_text: `${head}\\nChambre <b>${esc(ctx.room)}</b> — ${esc(ctx.patient.full_name || 'Patient')}\\n${esc(justification)}\\n${resolved ? '' : 'Médecin de garde sollicité.\\n'}${ctx.platform_url}/`,\n  } };\n});\n"
+      },
+      "id": "55116bd8-f920-5f4a-8c37-8c00975ce89f",
+      "name": "Valider le verdict",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "30f2a7d5-fa8f-5c9c-bfb0-c11ece522f77",
+              "leftValue": "={{ $json.resolved }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "7593ee99-7dd0-50e9-adf8-fe82aab21539",
+      "name": "Résolu ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.platform_url }}/api/risks/{{ $json.risk_id }}/resolve",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}"
+      },
+      "id": "5bc05ae2-77e4-599a-a69e-71d739b5cdd8",
+      "name": "Plateforme : résoudre",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Valider le verdict').item.json.chat_id }}",
+        "text": "={{ $('Valider le verdict').item.json.telegram_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "a5519976-5aad-5d7e-924a-708da084df46",
+      "name": "Telegram : confirmation",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2160,
+        100
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED_TELEGRAM__",
+          "name": "Hospital Copilot — Telegram"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "0cf033fc-3b50-5e65-87fe-4ebff2f4547f"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Valider le verdict').item.json.platform_url }}/api/agents/log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "agent",
+              "value": "risk-verify"
+            },
+            {
+              "name": "room",
+              "value": "={{ $('Valider le verdict').item.json.room || '' }}"
+            },
+            {
+              "name": "input",
+              "value": "=état réel relu après attente — réponse Anthropic {{ $('Valider le verdict').item.json.anthropic_id || '(aucune)' }} ({{ $('Valider le verdict').item.json.model_used }})"
+            },
+            {
+              "name": "reasoning",
+              "value": "={{ $('Valider le verdict').item.json.justification }}"
+            },
+            {
+              "name": "output",
+              "value": "=risque #{{ $('Valider le verdict').item.json.risk_id }} résolu et vérifié"
+            },
+            {
+              "name": "status",
+              "value": "={{ $('Valider le verdict').item.json.fallback ? 'error' : 'ok' }}"
+            },
+            {
+              "name": "duration_ms",
+              "value": "={{ Date.now() - ($('Valider le verdict').item.json.started_at || Date.now()) }}"
+            },
+            {
+              "name": "risk_id",
+              "value": "={{ $('Valider le verdict').item.json.risk_id }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "10e34da5-37d7-5c4f-bb33-a0544db497ab",
+      "name": "Journal : résolu",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.platform_url }}/api/risks/{{ $json.risk_id }}/persistent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}"
+      },
+      "id": "392a0bd5-7d62-5ff9-8a87-900f47dba969",
+      "name": "Plateforme : risque persistant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        500
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Valider le verdict').item.json.chat_id }}",
+        "text": "={{ $('Valider le verdict').item.json.telegram_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "079d1d29-841d-5519-b3d8-336877bd726d",
+      "name": "Telegram : alerte",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2160,
+        500
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED_TELEGRAM__",
+          "name": "Hospital Copilot — Telegram"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "222a5c26-8ee7-5121-a5ba-23c7614f4d6a"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Valider le verdict').item.json.platform_url }}/api/agents/log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "agent",
+              "value": "risk-verify"
+            },
+            {
+              "name": "room",
+              "value": "={{ $('Valider le verdict').item.json.room || '' }}"
+            },
+            {
+              "name": "input",
+              "value": "=état réel relu après attente — réponse Anthropic {{ $('Valider le verdict').item.json.anthropic_id || '(aucune)' }} ({{ $('Valider le verdict').item.json.model_used }})"
+            },
+            {
+              "name": "reasoning",
+              "value": "={{ $('Valider le verdict').item.json.justification }}"
+            },
+            {
+              "name": "output",
+              "value": "=risque #{{ $('Valider le verdict').item.json.risk_id }} persistant : escalade au médecin de garde"
+            },
+            {
+              "name": "status",
+              "value": "error"
+            },
+            {
+              "name": "duration_ms",
+              "value": "={{ Date.now() - ($('Valider le verdict').item.json.started_at || Date.now()) }}"
+            },
+            {
+              "name": "risk_id",
+              "value": "={{ $('Valider le verdict').item.json.risk_id }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "64072064-ff35-533e-a3a6-9c8f63da8896",
+      "name": "Journal : persistant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        500
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Webhook staff-left": {
+      "main": [
+        [
+          {
+            "node": "Contexte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexte": {
+      "main": [
+        [
+          {
+            "node": "Journal : sortie du personnel",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Attendre 2 min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attendre 2 min": {
+      "main": [
+        [
+          {
+            "node": "Plateforme : état de la chambre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plateforme : état de la chambre": {
+      "main": [
+        [
+          {
+            "node": "Construire le prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire le prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude : risque résolu ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude : risque résolu ?": {
+      "main": [
+        [
+          {
+            "node": "Valider le verdict",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valider le verdict": {
+      "main": [
+        [
+          {
+            "node": "Résolu ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plateforme : résoudre": {
+      "main": [
+        [
+          {
+            "node": "Telegram : confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram : confirmation": {
+      "main": [
+        [
+          {
+            "node": "Journal : résolu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plateforme : risque persistant": {
+      "main": [
+        [
+          {
+            "node": "Telegram : alerte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram : alerte": {
+      "main": [
+        [
+          {
+            "node": "Journal : persistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Résolu ?": {
+      "main": [
+        [
+          {
+            "node": "Plateforme : résoudre",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Plateforme : risque persistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

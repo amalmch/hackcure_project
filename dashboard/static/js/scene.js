@@ -249,6 +249,14 @@ const HospitalScene = (() => {
             const v = vit[(p && p.state) || 'normal'] || vit.normal;
             m.targetHr = v[0]; m.spo2 = v[1]; m.bp = v[2];
             m.alarm = !!p && p.state !== 'normal' && p.state !== undefined;
+            // Extension : valeurs réelles (setMonitorVitals) prioritaires sur la table fixe
+            const rv = realVitals[m.room];
+            if (rv && performance.now() - rv.ts < 20000) {
+                if (rv.hr != null) m.targetHr = rv.hr;
+                if (rv.spo2 != null) m.spo2 = rv.spo2;
+                if (rv.bp) m.bp = rv.bp;
+                m.alarm = m.alarm || !!rv.alarm;
+            }
             m.machineError = !!p && p.machine_error;
             m.machineType = (p && p.machine_type) || '';
         });
@@ -427,6 +435,7 @@ const HospitalScene = (() => {
     function buildWindow(room) {
         const cx = (WINDOW.x0 + WINDOW.x1) / 2, w = WINDOW.x1 - WINDOW.x0, h = WINDOW.top - WINDOW.sill, zc = -3 - WALL_T / 2;
         const pane = B(w, h, 0.03, MAT.glass, cx, WINDOW.sill + h / 2, zc, room, false); pane.renderOrder = 2;
+        room.userData.windowPane = pane;   // equipment.js la masque quand la fenêtre est ouverte
         B(w + 0.12, 0.06, 0.2, MAT.white, cx, WINDOW.top + 0.03, zc, room);
         B(w + 0.12, 0.06, 0.2, MAT.white, cx, WINDOW.sill - 0.03, zc, room);
         [WINDOW.x0 - 0.03, WINDOW.x1 + 0.03, cx].forEach(x => B(0.06, h, 0.2, MAT.white, x, WINDOW.sill + h / 2, zc, room));
@@ -838,6 +847,7 @@ const HospitalScene = (() => {
         [-1, 1].forEach(sd => mesh(new THREE.SphereGeometry(0.1, 8, 6), EX.bulb, 2.64, 0.8, sd * 0.65, g, false));
         [-1.5, 1.5].forEach(wx => [-1, 1].forEach(sd => wheel(g, wx, 0.42, sd * 0.95, 0.42)));
         g.position.set(x, GY + 0.01, z); g.rotation.y = rotY; scene.add(g);
+        scene.userData.ambulance = g;   // ambulance-3d.js anime son arrivée (V2)
     }
     function buildCar(x, z, rotY, color) {
         const g = new THREE.Group(), body = std(color, { roughness: 0.3, metalness: 0.3 });
@@ -1414,6 +1424,9 @@ const HospitalScene = (() => {
     function animate() {
         animationId = requestAnimationFrame(animate);
         const now = performance.now();
+        // Une vue HTML recouvre le jumeau : la scène reste vivante mais n'est redessinée que 2 fois par seconde
+        // (sans carte graphique, une image coûte cher et figeait les vues).
+        if (document.body.classList.contains('view-open')) { if (now - (animate.lastHidden || 0) < 500) return; animate.lastHidden = now; }
         stepTween(now);
         const walking = typeof HospitalFloors !== 'undefined' && HospitalFloors.isWalking();
         if (!walking && !camTween) controls.update();
@@ -1426,6 +1439,7 @@ const HospitalScene = (() => {
         const dt = Math.min((now - (animate.last || now)) / 1000, 0.1); animate.last = now;
         animateExterior(now / 1000, dt);
         if (typeof AvatarManager !== 'undefined') AvatarManager.update(dt);
+        animateRiskFrames(now / 1000);
         if (typeof HospitalFloors !== 'undefined') HospitalFloors.update(dt, now / 1000);
         renderer.render(scene, camera);
     }
@@ -1527,11 +1541,60 @@ const HospitalScene = (() => {
         const c = Math.cos(r.rotY), s = Math.sin(r.rotY);
         return { x: r.x + BED.x * c + BED.z * s, z: r.z - BED.x * s + BED.z * c, rotY: r.rotY };
     }
+    // ─── Extensions plateforme (additives, phase D) ───────────
+    // Valeurs réelles des moniteurs : setMonitorVitals('101', {hr, spo2, bp:'120/80', alarm})
+    const realVitals = {};
+    function setMonitorVitals(roomId, v) {
+        if (!v) { delete realVitals[roomId]; return; }
+        realVitals[roomId] = { hr: v.hr, spo2: v.spo2, bp: v.bp, alarm: !!v.alarm, ts: performance.now() };
+    }
+    // Liseré de sol coloré selon le risque max de la chambre : none | low | medium | high | critical
+    const riskFrames = {};
+    const RISK_COLORS = { low: 0x22c55e, medium: 0xf59e0b, high: 0xef4444, critical: 0xa855f7 };
+    function setRoomRiskColor(roomId, level) {
+        const room = roomGroups[roomId]; if (!room) return;
+        let f = riskFrames[roomId];
+        if (!f) {
+            const mat = new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.0, depthWrite: false });
+            const g = new THREE.Group(); g.position.y = 0.012; g.renderOrder = 3;
+            const T = 0.12, Y = 0;
+            [[0, -2.94, 7.9, T], [0, 2.94, 7.9, T], [-3.94, 0, T, 5.9], [3.94, 0, T, 5.9]].forEach(([x, z, w, d]) => {
+                const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.02, d), mat); m.position.set(x, Y, z); g.add(m);
+            });
+            room.add(g);
+            f = riskFrames[roomId] = { group: g, mat, level: 'none' };
+        }
+        f.level = level || 'none';
+        const c = RISK_COLORS[f.level];
+        if (!c) { f.group.visible = false; return; }
+        f.group.visible = true; f.mat.color.setHex(c);
+        f.mat.opacity = f.level === 'low' ? 0.35 : 0.8;
+    }
+    function animateRiskFrames(t) {
+        Object.values(riskFrames).forEach(f => {
+            if (!f.group.visible) return;
+            if (f.level === 'critical') f.mat.opacity = 0.55 + 0.4 * Math.sin(t * 5);
+            else if (f.level === 'high') f.mat.opacity = 0.6 + 0.25 * Math.sin(t * 3);
+        });
+    }
+    function getRoomGroup(roomId) { return roomGroups[roomId] || null; }
+    function getRoomConfig(roomId) { return ROOMS[roomId] ? { ...ROOMS[roomId], w: ROOM_W, d: ROOM_D, door: { ...DOOR }, window: { ...WINDOW } } : null; }
+
     function dispose() {
         cancelAnimationFrame(animationId);
         window.removeEventListener('resize', onResize);
         renderer.dispose();
     }
 
-    return { init, getScene, getCamera, getBedParts, getBedWorldPosition, focusOnPatient, zoomToRoom, zoomToReception, resetCamera, topDownView, dispose, BED };
+    // Vol de caméra vers un point exprimé dans le repère local d'une chambre (ex. sa fenêtre) — ajout V2
+    function flyToLocal(roomId, posLocal, targetLocal, fov = 60, duration = 0.5) {
+        const room = roomGroups[roomId]; if (!room) return;
+        room.updateMatrixWorld(true);
+        moveCameraTo(room.localToWorld(V(posLocal)), room.localToWorld(V(targetLocal)), duration, fov);
+        const ov = document.getElementById('cctv-overlay'); if (ov) ov.classList.add('cctv-hidden');
+    }
+    function focusOnWindow(roomId) { flyToLocal(roomId, [0.6, 1.9, 1.6], [(WINDOW.x0 + WINDOW.x1) / 2, 1.5, -3], 62); }
+
+    return { init, getScene, getCamera, getBedParts, getBedWorldPosition, focusOnPatient, zoomToRoom, zoomToReception, resetCamera, topDownView, dispose, BED,
+        setMonitorVitals, setRoomRiskColor, getRoomGroup, getRoomConfig, flyToLocal, focusOnWindow };
 })();

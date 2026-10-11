@@ -1,0 +1,10 @@
+name: medication_resolves
+description: Un infirmier administre la prise en retard au lit du patient, l'enregistre dans le plan de soins, puis sort.
+room: "101"
+role: nurse
+resolves: [medication_late]
+duration: 52
+steps:
+  - { at: 0, action: staff_enter, persons: 2 }
+  - { at: 12, action: noop, hook: administer_due }
+  - { at: 48, action: staff_leave }

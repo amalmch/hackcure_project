@@ -1,0 +1,14 @@
+name: cardiac_resolves
+description: Le medecin de garde realise l'ECG 12 derivations, lance le protocole coronarien et la surveillance scopee ; le segment ST se normalise.
+room: "102"
+role: duty_doctor
+resolves: [predicted_cardiac]
+duration: 62
+steps:
+  - { at: 0, action: staff_enter, persons: 3 }
+  - { at: 10, action: clear_trends }
+  - { at: 10, action: trend, metric: st, target: 0.2, duration: 30, hold: 900 }
+  - { at: 10, action: trend, metric: hr, target: 86, duration: 30, hold: 900 }
+  - { at: 10, action: trend, metric: sys, target: 116, duration: 30, hold: 900 }
+  - { at: 25, action: expression, expression: neutral, confidence: 0.8 }
+  - { at: 58, action: staff_leave }

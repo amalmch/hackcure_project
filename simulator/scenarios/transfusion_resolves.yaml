@@ -1,0 +1,12 @@
+name: transfusion_resolves
+description: Le medecin de garde fait arreter la transfusion, examine le patient et prescrit la surveillance.
+room: "101"
+role: duty_doctor
+resolves: [transfusion_reaction]
+duration: 56
+steps:
+  - { at: 0, action: staff_enter, persons: 3 }
+  - { at: 6, action: reaction, value: false }
+  - { at: 6, action: clear_trends }
+  - { at: 14, action: device_status, device: transfusion, status: stopped }
+  - { at: 52, action: staff_leave }

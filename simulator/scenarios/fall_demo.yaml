@@ -1,0 +1,14 @@
+name: fall_demo
+description: Chambre 104 - le patient se leve seul la nuit, puis chute pres du lit (douleur visible).
+room: "104"
+duration: 40
+steps:
+  - { at: 0, action: night, value: true }
+  - { at: 0, action: posture, posture: lying_bed, activity: sleeping, zone: bed }
+  - { at: 3, action: posture, posture: sitting_bed, activity: awake_bed, zone: bed }
+  - { at: 7, action: posture, posture: standing, activity: out_of_bed, zone: floor }
+  - { at: 11, action: posture, posture: walking, activity: out_of_bed, zone: floor }
+  - { at: 15, action: fall }
+  - { at: 15, action: trend, metric: hr, target: 122, duration: 10, hold: 600 }
+  - { at: 15, action: trend, metric: sys, target: 96, duration: 15, hold: 600 }
+  - { at: 16, action: expression, expression: pain, confidence: 0.82 }

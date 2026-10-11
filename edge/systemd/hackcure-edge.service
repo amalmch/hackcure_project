@@ -1,0 +1,16 @@
+[Unit]
+Description=HackCure edge (chambre 101) - vision, thermique, capteurs, regles locales
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/Hospital_copilot
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/pi/Hospital_copilot/.venv/bin/python edge/main.py --config edge/config/room101.yaml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

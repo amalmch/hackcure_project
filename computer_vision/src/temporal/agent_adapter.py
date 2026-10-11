@@ -8,8 +8,8 @@ the Teammate Intervention Agent service.
 from __future__ import annotations
 import json
 import logging
+import os
 from typing import Dict, List, Optional
-import requests
 
 logger = logging.getLogger("hackcure.agent_adapter")
 
@@ -19,8 +19,10 @@ class InterventionAgentAdapter:
     Adapter bridging the HackCure Monitoring AI with Teammate Intervention Agents.
     Acts as a resilient client that falls back gracefully if the agent service is offline.
     """
-    def __init__(self, agent_service_url: str = "http://localhost:8001/api/recommend"):
-        self.agent_service_url = agent_service_url
+    def __init__(self, agent_service_url: Optional[str] = None):
+        # Hospital Copilot : le service d'intervention est la plateforme elle-même (VisionAgent → RiskAgent).
+        # Un service externe reste possible par INTERVENTION_AGENT_URL ; sans URL, aucune requête n'est faite.
+        self.agent_service_url = agent_service_url or os.environ.get("INTERVENTION_AGENT_URL") or None
 
     def request_recommendation(self, ai_event: dict) -> List[str]:
         """
@@ -29,11 +31,14 @@ class InterventionAgentAdapter:
         """
         # 1. Attempt live HTTP call to teammate's agent service
         try:
-            resp = requests.post(self.agent_service_url, json=ai_event, timeout=1.0)
-            if resp.status_code == 200:
-                data = resp.json()
-                if "recommendations" in data:
-                    return data["recommendations"]
+            if self.agent_service_url:
+                import requests
+
+                resp = requests.post(self.agent_service_url, json=ai_event, timeout=1.0)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if "recommendations" in data:
+                        return data["recommendations"]
         except Exception:
             # Safe monitoring fallback: teammate agent service not yet running
             pass

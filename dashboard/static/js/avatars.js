@@ -54,6 +54,56 @@ const AvatarManager = (() => {
         };
     }
 
+    // ─── Poses supplémentaires (phase D) : sitting_up, sitting_edge, standing, walking, sitting_chair, absent
+    function extraPoses(b) {
+        const lie = b.backAngle, sit = 0.96, padY = b.deckY + 0.105, H = Math.PI / 2;
+        const upright = { 'pelvis.rot': [0, 0, 0], 'torso.rot': [0.05, 0, 0], 'neck.rot': [0, 0, 0] };
+        const armsDown = { 'aR.s': [0.05, 0, -0.12], 'aR.e': [-0.25, 0, 0], 'aL.s': [0.05, 0, 0.12], 'aL.e': [-0.25, 0, 0] };
+        const legsStraight = { 'lR.h': [0, 0, -0.03], 'lR.k': [0, 0, 0], 'lL.h': [0, 0, 0.03], 'lL.k': [0, 0, 0] };
+        const chairRot = Math.atan2(b.x - 2.9, b.z - -0.6);   // même orientation que le fauteuil (scene.js)
+        const chairX = 2.9 - b.x - 0.15, chairZ = -0.6 - b.z;  // fauteuil en coordonnées lit-locales
+        return {
+            sitting_up: {
+                'body.pos': [0, 0, 0], 'body.rot': [0, 0, 0],
+                'pelvis.pos': [0, padY, -0.05], 'pelvis.rot': [-H, 0, 0],
+                'torso.rot': [sit, 0, 0], 'neck.rot': [0.25, 0, 0],
+                'aR.s': [-0.35, 0, -0.1], 'aR.e': [-0.7, 0, 0.2], 'aL.s': [-0.35, 0, 0.1], 'aL.e': [-0.7, 0, -0.2],
+                ...legsStraight, backrest: sit, blanket: 0.6,
+                ring: [0, 0, 1, 1.55], label: [0, 2.0, -0.2],
+            },
+            sitting_edge: {
+                'body.pos': [0.62, 0, 0.1], 'body.rot': [0, H, 0],
+                'pelvis.pos': [0, padY + 0.03, 0], ...upright, 'torso.rot': [0.18, 0, 0], 'neck.rot': [0.08, 0, 0],
+                'aR.s': [-0.15, 0, -0.25], 'aR.e': [-0.35, 0, 0], 'aL.s': [-0.15, 0, 0.25], 'aL.e': [-0.35, 0, 0],
+                'lR.h': [-H + 0.1, 0, -0.08], 'lR.k': [H - 0.15, 0, 0], 'lL.h': [-H + 0.1, 0, 0.08], 'lL.k': [H - 0.15, 0, 0],
+                backrest: lie, blanket: 0.35,
+                ring: [0.4, 0.1, 1, 1.55], label: [0.62, 2.05, 0.1],
+            },
+            standing: {
+                'body.pos': [1.35, 0, -0.25], 'body.rot': [0, H + 0.35, 0],
+                'pelvis.pos': [0, 1.07, 0], ...upright, ...armsDown, ...legsStraight,
+                backrest: lie, blanket: 0.3,
+                ring: [1.35, -0.25, 0.62, 0.62], label: [1.35, 2.15, -0.25],
+            },
+            walking: {
+                'body.pos': [2.4, 0, 1.4], 'body.rot': [0, 0.3, 0],
+                'pelvis.pos': [0, 1.07, 0], ...upright, 'torso.rot': [0.12, 0, 0], ...armsDown, ...legsStraight,
+                backrest: lie, blanket: 0.3,
+                ring: [2.4, 1.4, 0.62, 0.62], label: [2.4, 2.15, 1.4],
+            },
+            sitting_chair: {
+                'body.pos': [chairX, 0, chairZ], 'body.rot': [0, chairRot, 0],
+                'pelvis.pos': [0, 0.52, 0], ...upright, 'torso.rot': [0.12, 0, 0], 'neck.rot': [0.05, 0, 0],
+                'aR.s': [-0.55, 0, -0.1], 'aR.e': [-0.9, 0, 0.15], 'aL.s': [-0.55, 0, 0.1], 'aL.e': [-0.9, 0, -0.15],
+                'lR.h': [-H + 0.15, 0, -0.08], 'lR.k': [H - 0.2, 0, 0], 'lL.h': [-H + 0.15, 0, 0.08], 'lL.k': [H - 0.2, 0, 0],
+                backrest: lie, blanket: 0.3,
+                ring: [chairX, chairZ, 0.62, 0.62], label: [chairX, 1.75, chairZ],
+            },
+        };
+    }
+    const POSTURE_TO_POSE = { lying_bed: 'normal', sitting_bed: 'sitting_up', sitting_chair: 'sitting_chair', standing: 'standing', walking: 'walking', on_floor: 'fall', absent: 'absent' };
+    const EXPR_ICON = { pain: '\u{1F623}', happy: '\u{1F60A}', sad: '\u{1F61F}', fear: '\u{1F628}', anger: '\u{1F620}', surprise: '\u{1F62E}' };
+
     const JOINT = {
         'body.pos': a => a.body.position, 'body.rot': a => a.body.rotation,
         'pelvis.pos': a => a.pelvis.position, 'pelvis.rot': a => a.pelvis.rotation,
@@ -181,6 +231,15 @@ const AvatarManager = (() => {
         };
         a.poses = poses(BED());
         groundPose(a, a.poses.fall);
+        // Extensions (phase D) : poses supplémentaires, icône d'expression, halo thermique, badge d'absence
+        Object.assign(a.poses, extraPoses(BED()));
+        a.poses.absent = Object.assign({}, a.poses.normal, { ring: [0, 0, 1, 1.55], label: [0, 1.95, -0.2] });
+        ['standing', 'walking', 'sitting_chair'].forEach(k => groundPose(a, a.poses[k]));
+        a.posture = 'lying_bed'; a.poseName = 'normal'; a.expression = 'neutral'; a.skinTemp = null; a.walkPhase = 0;
+        a.exprSprite = createIconSprite(EXPR_ICON.pain); a.exprSprite.visible = false; group.add(a.exprSprite);
+        a.haloMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0, depthWrite: false });
+        a.halo = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 12), a.haloMat); a.halo.visible = false; group.add(a.halo);
+        a.absentBadge = createLabel('Hors chambre'); a.absentBadge.visible = false; a.absentBadge.position.set(0, 1.6, -0.2); a.absentBadge.scale.set(1.6, 0.4, 1); group.add(a.absentBadge);
         a.pose = a.poses.normal;
         applyNow(a, a.pose);
         syncExtras(a, true);
@@ -199,6 +258,37 @@ const AvatarManager = (() => {
         const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
         sprite.scale.set(1.3, 0.325, 1); sprite.renderOrder = 10;
         return sprite;
+    }
+
+    function createIconSprite(icon) {
+        const canvas = document.createElement('canvas'); canvas.width = 96; canvas.height = 96;
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true, depthTest: false }));
+        sprite.scale.set(0.42, 0.42, 1); sprite.renderOrder = 11; sprite.userData.icon = null;
+        setIcon(sprite, icon);
+        return sprite;
+    }
+    function setIcon(sprite, icon) {
+        if (sprite.userData.icon === icon) return;
+        const c = sprite.material.map.image, ctx = c.getContext('2d');
+        ctx.clearRect(0, 0, c.width, c.height);
+        ctx.font = '72px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(icon, 48, 54); sprite.material.map.needsUpdate = true; sprite.userData.icon = icon;
+    }
+    function setLabelText(sprite, text) {
+        const c = sprite.material.map.image, ctx = c.getContext('2d');
+        ctx.clearRect(0, 0, c.width, c.height);
+        ctx.fillStyle = 'rgba(15,23,42,0.85)'; ctx.fillRect(0, 0, 256, 64);
+        ctx.strokeStyle = 'rgba(245,158,11,0.8)'; ctx.lineWidth = 2; ctx.strokeRect(0, 0, 256, 64);
+        ctx.fillStyle = '#fde68a'; ctx.font = 'bold 24px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(text, 128, 32); sprite.material.map.needsUpdate = true;
+    }
+    // Choix de la pose : la chute / la douleur (état 3D existant) gardent la priorité sur la posture vision
+    function choosePose(a, p) {
+        if (p.fall_detected) return 'fall';
+        const fromPosture = POSTURE_TO_POSE[a.posture] || 'normal';
+        if (fromPosture === 'absent') return 'absent';   // hors de la chambre : rien à afficher dans le lit
+        if (p.pain_detected) return (fromPosture === 'normal' || fromPosture === 'sitting_up') ? 'pain' : fromPosture;
+        return fromPosture;
     }
 
     function poseKey(p) {
@@ -238,10 +328,35 @@ const AvatarManager = (() => {
             machErrTriMat.opacity = 0;
         }
 
-        a.pose = a.poses[poseKey(patient)];
+        a.poseName = choosePose(a, patient);
+        a.pose = a.poses[a.poseName] || a.poses[poseKey(patient)];
+        a.body.visible = a.poseName !== 'absent';
+        a.ring.visible = a.poseName !== 'absent';
+        if (a.absentBadge) a.absentBadge.visible = a.poseName === 'absent';
         a.state = patient.state;
         syncExtras(a, false);
     }
+
+    // ─── API des extensions (utilisée par room-live.js) ─────
+    function setPosture(patientId, posture, activity) {
+        const a = avatars[patientId]; if (!a) return;
+        a.posture = POSTURE_TO_POSE[posture] ? posture : 'lying_bed';
+        if (a.absentBadge && posture === 'absent') setLabelText(a.absentBadge, activity === 'toilet' ? 'WC' : 'Hors chambre');
+        const p = PatientStateManager.getPatient(patientId);
+        updateAvatarState(p || { patient_id: patientId, state: 'normal', fall_detected: false, pain_detected: false });
+    }
+    function setExpression(patientId, expression) {
+        const a = avatars[patientId]; if (!a) return;
+        a.expression = expression || 'neutral';
+        const icon = EXPR_ICON[a.expression];
+        a.exprSprite.visible = !!icon;
+        if (icon) setIcon(a.exprSprite, icon);
+    }
+    function setSkinTemp(patientId, tempC) {
+        const a = avatars[patientId]; if (!a) return;
+        a.skinTemp = (tempC == null) ? null : Number(tempC);
+    }
+    function getPosture(patientId) { const a = avatars[patientId]; return a ? a.posture : null; }
 
     function resetAll() {
         Object.keys(avatars).forEach(id => {
@@ -270,6 +385,23 @@ const AvatarManager = (() => {
             const lp = a.pose.label;
             a.label.position.x += (lp[0] - a.label.position.x) * k; a.label.position.y += (lp[1] - a.label.position.y) * k; a.label.position.z += (lp[2] - a.label.position.z) * k;
 
+            // Extensions : balancement de marche, icône d'expression, halo de température cutanée
+            if (a.poseName === 'walking') {
+                a.walkPhase += delta * 6;
+                const sw = Math.sin(a.walkPhase) * 0.5;
+                a.pose['lR.h'][0] = sw; a.pose['lL.h'][0] = -sw;
+                a.pose['lR.k'][0] = Math.max(0, -sw) * 0.9; a.pose['lL.k'][0] = Math.max(0, sw) * 0.9;
+                a.pose['aR.s'][0] = -sw * 0.6; a.pose['aL.s'][0] = sw * 0.6;
+            }
+            if (a.exprSprite.visible || a.halo.visible || a.skinTemp != null) {
+                a.head.getWorldPosition(_v); a.group.worldToLocal(_v);
+                a.exprSprite.position.copy(_v).add(new THREE.Vector3(0.22, 0.42, 0));
+                a.halo.position.copy(_v);
+                const t = a.skinTemp;
+                const level = (t == null || a.poseName === 'absent') ? 0 : (t >= 38.3 ? 2 : (t >= 37.5 ? 1 : 0));
+                a.halo.visible = level > 0;
+                if (level) { a.haloMat.color.setHex(level === 2 ? 0xef4444 : 0xf59e0b); a.haloMat.opacity = (level === 2 ? 0.32 : 0.22) + 0.08 * Math.sin(time * 3); }
+            }
             if (a.state !== 'normal') a.ringMat.opacity = 0.6 + 0.3 * Math.sin(time * 4);
             if (a.painMat.opacity > 0) {
                 a.painMat.opacity = 0.5 + 0.5 * Math.sin(time * 6);
@@ -297,5 +429,5 @@ const AvatarManager = (() => {
         return null;
     }
 
-    return { init, update, getAvatarAtPosition };
+    return { init, update, getAvatarAtPosition, setPosture, setExpression, setSkinTemp, getPosture };
 })();

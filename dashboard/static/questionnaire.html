@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Questionnaire de bien-être — Clinique HackCure</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; background: #f1f5f9; color: #0f172a; font-size: 20px; line-height: 1.45; }
+        header { background: #0ea5e9; color: #fff; padding: 18px 24px; font-weight: 700; font-size: 22px; }
+        main { max-width: 860px; margin: 0 auto; padding: 20px 18px 120px; }
+        .card { background: #fff; border-radius: 16px; padding: 20px 22px; margin: 16px 0; box-shadow: 0 2px 10px rgba(15,23,42,.08); }
+        h2 { margin: 0 0 6px; font-size: 24px; color: #0369a1; }
+        .intro { color: #475569; font-size: 18px; margin-bottom: 10px; }
+        .q { padding: 16px 0; border-top: 1px solid #e2e8f0; }
+        .q:first-of-type { border-top: 0; }
+        .q p { margin: 0 0 12px; font-weight: 600; }
+        .choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .choices label { display: block; text-align: center; padding: 14px 8px; border: 2px solid #cbd5e1; border-radius: 12px; cursor: pointer; font-size: 17px; background: #f8fafc; user-select: none; }
+        .choices input { position: absolute; opacity: 0; }
+        .choices input:checked + span { font-weight: 700; }
+        .choices label:has(input:checked) { border-color: #0ea5e9; background: #e0f2fe; color: #075985; }
+        .bar { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid #cbd5e1; padding: 14px 18px; display: flex; gap: 14px; align-items: center; justify-content: center; }
+        button { font-size: 20px; font-weight: 700; padding: 14px 34px; border-radius: 12px; border: 0; background: #0ea5e9; color: #fff; cursor: pointer; }
+        button:disabled { background: #94a3b8; }
+        .progress { color: #475569; font-size: 17px; }
+        .done { text-align: center; padding: 60px 20px; font-size: 24px; }
+        .help { color: #475569; font-size: 17px; }
+        @media (max-width: 640px) { .choices { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <header>🏥 Clinique HackCure — Questionnaire de bien-être</header>
+    <main id="app"><div class="card">Chargement…</div></main>
+    <div class="bar" id="bar" style="display:none"><span class="progress" id="progress"></span><button id="send" disabled>Envoyer mes réponses</button></div>
+    <script>
+        (async () => {
+            const token = location.pathname.split('/').pop();
+            const app = document.getElementById('app');
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const thanks = '<div class="card done">✅ Merci !<br><span class="help">Vos réponses ont été transmises à l\'équipe soignante.<br>Vous pouvez rendre la tablette.</span></div>';
+            let form;
+            try { const r = await fetch(`/api/psych/questionnaire/${token}`); if (!r.ok) throw new Error(); form = await r.json(); }
+            catch (_) { app.innerHTML = '<div class="card done">Ce lien n\'est pas valide.<br><span class="help">Demandez de l\'aide à un soignant.</span></div>'; return; }
+            if (form.status === 'completed') { app.innerHTML = thanks; return; }
+            let total = 0;
+            app.innerHTML = `<div class="card"><h2>Bonjour ${esc(form.first_name)}</h2><p class="help">Quelques questions pour mieux vous accompagner pendant votre séjour. Il n'y a pas de bonne ou de mauvaise réponse.
+                Vos réponses sont confidentielles et lues par l'équipe soignante. Vous pouvez demander de l'aide à tout moment.</p></div>`
+                + form.sections.map(s => `<div class="card"><h2>${esc(s.title)}</h2><div class="intro">${esc(s.intro)}</div>${s.items.map((it, i) => { total++; return `<div class="q"><p>${i + 1}. ${esc(it)}</p>
+                    <div class="choices">${form.scale.map((c, v) => `<label><input type="radio" name="${s.key}-${i}" value="${v}"><span>${esc(c)}</span></label>`).join('')}</div></div>`; }).join('')}</div>`).join('');
+            const bar = document.getElementById('bar'), send = document.getElementById('send'), progress = document.getElementById('progress');
+            bar.style.display = 'flex';
+            const refresh = () => { const n = app.querySelectorAll('input:checked').length; progress.textContent = `${n} / ${total} réponses`; send.disabled = n < total; };
+            app.addEventListener('change', refresh); refresh();
+            send.addEventListener('click', async () => {
+                send.disabled = true;
+                const body = {};
+                form.sections.forEach(s => { body[s.key] = s.items.map((_, i) => Number(app.querySelector(`input[name="${s.key}-${i}"]:checked`).value)); });
+                try { const r = await fetch(`/api/psych/questionnaire/${token}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!r.ok && r.status !== 409) throw new Error();
+                    app.innerHTML = thanks; bar.style.display = 'none'; window.scrollTo(0, 0); }
+                catch (_) { send.disabled = false; progress.textContent = 'Envoi impossible : réessayez ou appelez un soignant.'; }
+            });
+        })();
+    </script>
+</body>
+</html>

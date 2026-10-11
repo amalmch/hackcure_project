@@ -21,10 +21,9 @@ from .temporal.fall_detector import FallDetector
 from .face.discomfort import DiscomfortAssociator
 from .spatial.position import compute_position
 from .visualization import annotate_frame
-from .transformer.model import HackCurePatientTransformer
 from .temporal.risk_analyzer import TemporalRiskAnalyzer
 from .temporal.agent_adapter import InterventionAgentAdapter
-import torch
+from .behavior import load_transformer  # transformer optionnel : None si PyTorch, le backbone ou les poids manquent
 
 CV_DIR = Path(__file__).resolve().parent.parent
 logger = logging.getLogger(__name__)
@@ -91,15 +90,7 @@ class PatientMonitor:
         self.agent_adapter = InterventionAgentAdapter()
         self.transformer = None
 
-        transformer_weights = CV_DIR / "runs" / "patient_transformer" / "best_transformer.pt"
-        try:
-            self.transformer = HackCurePatientTransformer(device=device)
-            if transformer_weights.exists():
-                ckpt = torch.load(transformer_weights, map_location=self.transformer.device, weights_only=True)
-                self.transformer.head.load_state_dict(ckpt["model_state"])
-                logger.info(f"Loaded trained HackCure Vision Transformer from {transformer_weights}")
-        except Exception as e:
-            logger.warning(f"Vision Transformer could not be initialized: {e}")
+        self.transformer = load_transformer(device)  # repli automatique sur YOLO + analyse temporelle
 
     def process_frame(
         self,

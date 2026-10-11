@@ -1,0 +1,6 @@
+{
+  "TN": {"country": "Tunisia", "numbers": [{"label": "SAMU", "number": "190"}, {"label": "Civil Protection", "number": "198"}]},
+  "FR": {"country": "France", "numbers": [{"label": "SAMU", "number": "15"}, {"label": "European emergency number", "number": "112"}]},
+  "US": {"country": "United States", "numbers": [{"label": "Emergency services", "number": "911"}]},
+  "GB": {"country": "United Kingdom", "numbers": [{"label": "Emergency services", "number": "999"}, {"label": "European emergency number", "number": "112"}]}
+}

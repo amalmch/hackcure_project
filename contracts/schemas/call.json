@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hackcure/call.json",
+  "title": "hackcure/room/{room}/call",
+  "type": "object",
+  "required": ["ts", "source", "pressed"],
+  "properties": {
+    "ts": { "type": "string" },
+    "source": { "type": "string" },
+    "pressed": { "type": "boolean" }
+  },
+  "additionalProperties": true
+}

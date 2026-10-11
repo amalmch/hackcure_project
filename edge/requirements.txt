@@ -1,0 +1,16 @@
+# Edge Raspberry Pi 5 (Python 3.11) — python -m venv .venv && .venv/bin/pip install -r edge/requirements.txt
+numpy>=1.24
+opencv-python-headless>=4.8
+pyyaml>=6.0
+requests>=2.31
+paho-mqtt>=2.0
+# Vision (reutilise computer_vision/src) : poids entraines ou modele pose pre-entraine
+ultralytics>=8.0
+torch>=2.0
+# Expression FER+ (optionnel) : python edge/download_ferplus.py
+onnxruntime>=1.16
+# Materiel (optionnel : simulation automatique si absent)
+gpiozero>=2.0
+adafruit-circuitpython-mlx90640>=1.3
+adafruit-circuitpython-dht>=4.0
+adafruit-blinka>=8.0

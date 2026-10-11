@@ -1,0 +1,23 @@
+name: full_demo
+description: Demo complete 3 min - 101 lever + chute, infirmier, resolution ; fievre 101 en bonus.
+room: "101"
+duration: 170
+steps:
+  - { at: 0, action: night, value: true }
+  - { at: 0, action: posture, posture: lying_bed, activity: sleeping, zone: bed }
+  - { at: 10, action: posture, posture: sitting_bed, activity: awake_bed, zone: bed }
+  - { at: 16, action: posture, posture: standing, activity: out_of_bed, zone: floor }
+  - { at: 22, action: posture, posture: walking, activity: out_of_bed, zone: floor }
+  - { at: 30, action: fall }
+  - { at: 30, action: trend, metric: hr, target: 124, duration: 10, hold: 600 }
+  - { at: 30, action: trend, metric: sys, target: 94, duration: 15, hold: 600 }
+  - { at: 31, action: expression, expression: pain, confidence: 0.85 }
+  - { at: 60, action: staff_enter, persons: 2 }
+  - { at: 70, action: posture, posture: sitting_bed, activity: awake_bed, zone: bed }
+  - { at: 78, action: recover }
+  - { at: 78, action: clear_trends }
+  - { at: 78, action: trend, metric: hr, target: 82, duration: 20, hold: 300 }
+  - { at: 78, action: trend, metric: sys, target: 128, duration: 20, hold: 300 }
+  - { at: 90, action: staff_leave }
+  - { at: 130, action: thermal, skinTempC: 38.7, duration: 20 }
+  - { at: 130, action: trend, metric: temp, target: 39.0, duration: 25, hold: 600 }

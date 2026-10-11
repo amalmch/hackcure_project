@@ -1,0 +1,74 @@
+# Hospital Copilot - environnement conteneurise autonome.
+#   docker compose up -d --build                  -> plateforme (http://localhost:8000) + broker MQTT
+#   docker compose --profile n8n up -d --build    -> + n8n (http://localhost:5678)
+#   docker compose --profile mssql up -d          -> + SQL Server (optionnel)
+#   docker compose up -d mosquitto                -> broker seul (plateforme lancee hors Docker)
+# Le fichier .env de l'hote est lu s'il existe (cles, secrets, interrupteurs) ; rien n'est copie dans l'image.
+services:
+  platform:
+    build: .
+    image: hospital-copilot:latest
+    container_name: hackcure-platform
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # valeurs propres au reseau Docker (elles priment sur .env)
+      DATABASE_URL: "sqlite:////data/clinic.db"
+      MQTT_HOST: "mosquitto"
+      MQTT_PORT: "1883"
+      N8N_BASE_URL: "${N8N_BASE_URL_DOCKER:-http://n8n:5678}"
+      PLATFORM_URL: "${PLATFORM_URL_DOCKER:-http://platform:8000}"
+      TLS_CERT_DIR: "/data/certs"
+      PORT: "8000"
+    ports:
+      - "${PLATFORM_PORT:-8000}:8000"
+    volumes:
+      - hackcure-data:/data
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: hackcure-mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: hackcure-n8n
+    profiles: ["n8n"]
+    environment:
+      N8N_SECURE_COOKIE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      GENERIC_TIMEZONE: "Africa/Tunis"
+      TZ: "Africa/Tunis"
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n-data:/home/node/.n8n
+    restart: unless-stopped
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: hackcure-mssql
+    profiles: ["mssql"]
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-HackCure!2026}"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    restart: unless-stopped
+
+volumes:
+  hackcure-data:
+  n8n-data:
+  mssql-data:

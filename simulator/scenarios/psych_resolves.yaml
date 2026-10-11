@@ -1,0 +1,11 @@
+name: psych_resolves
+description: Le psychiatre vient au lit du patient - entretien d'evaluation, reassurance, consignes a l'equipe - puis sort.
+room: "101"
+role: psychiatrist
+resolves: [psych_alert, psych_low_wellbeing]
+duration: 62
+steps:
+  - { at: 0, action: staff_enter, persons: 2 }
+  - { at: 10, action: posture, posture: sitting_bed, activity: awake_bed, zone: bed }
+  - { at: 30, action: expression, expression: neutral, confidence: 0.8 }
+  - { at: 58, action: staff_leave }

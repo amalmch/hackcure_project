@@ -1,0 +1,14 @@
+name: fall_resolves
+description: Un infirmier entre, evalue le patient au sol, le releve et le recouche, puis sort.
+room: "101"
+role: nurse
+resolves: [fall, local_alarm]
+duration: 52
+steps:
+  - { at: 0, action: staff_enter, persons: 2 }
+  - { at: 14, action: posture, posture: sitting_bed, activity: awake_bed, zone: bed, confidence: 0.9 }
+  - { at: 22, action: recover }
+  - { at: 22, action: clear_trends }
+  - { at: 22, action: trend, metric: hr, target: 82, duration: 20, hold: 300 }
+  - { at: 22, action: trend, metric: sys, target: 124, duration: 20, hold: 300 }
+  - { at: 48, action: staff_leave }

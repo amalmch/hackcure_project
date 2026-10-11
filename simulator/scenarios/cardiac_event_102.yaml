@@ -1,0 +1,10 @@
+name: cardiac_event_102
+description: Chambre 102 - evenement cardiaque. Sus-decalage du segment ST a l'ECG, tachycardie, chute de la tension, douleur visible.
+room: "102"
+duration: 90
+steps:
+  - { at: 0, action: posture, posture: lying_bed, activity: awake_bed, zone: bed }
+  - { at: 5, action: trend, metric: st, target: 2.8, duration: 35, hold: 1800 }
+  - { at: 5, action: trend, metric: hr, target: 118, duration: 35, hold: 1800 }
+  - { at: 10, action: trend, metric: sys, target: 92, duration: 40, hold: 1800 }
+  - { at: 15, action: expression, expression: pain, confidence: 0.85 }

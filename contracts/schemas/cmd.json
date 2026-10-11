@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hackcure/cmd.json",
+  "title": "hackcure/room/{room}/cmd/{equipment}  (serveur -> edge)",
+  "type": "object",
+  "required": ["ts", "source", "action", "requestedBy", "reason"],
+  "properties": {
+    "ts": { "type": "string" },
+    "source": { "type": "string" },
+    "action": { "enum": ["open", "close", "on", "off", "set"] },
+    "value": {},
+    "requestedBy": { "type": "string" },
+    "reason": { "type": "string" },
+    "commandId": { "type": ["string", "null"] }
+  },
+  "additionalProperties": true
+}

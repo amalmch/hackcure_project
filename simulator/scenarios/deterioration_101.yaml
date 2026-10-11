@@ -1,0 +1,9 @@
+name: deterioration_101
+description: Chambre 101 - deterioration generale progressive. La frequence respiratoire et le pouls montent, la SpO2 baisse, le NEWS2 augmente.
+room: "101"
+duration: 150
+steps:
+  - { at: 0, action: posture, posture: lying_bed, activity: awake_bed, zone: bed }
+  - { at: 5, action: trend, metric: rr, target: 25, duration: 100, hold: 1800 }
+  - { at: 5, action: trend, metric: hr, target: 114, duration: 110, hold: 1800 }
+  - { at: 20, action: trend, metric: spo2, target: 92, duration: 100, hold: 1800 }

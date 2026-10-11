@@ -246,6 +246,7 @@ const DashboardUI = (() => {
             fall_and_pain: '🚨 Fall + Pain',
             recover: '✅ Recovery',
             machine_error: `⚙️ Machine Failure${machineLabel}`,
+            machine_repaired: '🔧 Machine back in service',
             behavioral_risk: '🧠 Behavioral Risk',
         };
 

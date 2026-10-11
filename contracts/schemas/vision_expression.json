@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hackcure/vision_expression.json",
+  "title": "hackcure/room/{room}/vision/expression",
+  "type": "object",
+  "required": ["ts", "source", "expression", "confidence"],
+  "properties": {
+    "ts": { "type": "string" },
+    "source": { "type": "string" },
+    "expression": { "enum": ["neutral", "happy", "sad", "pain", "fear", "anger", "surprise"] },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+  },
+  "additionalProperties": true
+}

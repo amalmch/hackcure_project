@@ -1,0 +1,11 @@
+name: pain_resolves
+description: Un infirmier evalue la douleur, administre l'antalgique prescrit et reinstalle le patient.
+room: "101"
+role: nurse
+resolves: [pain, call]
+duration: 52
+steps:
+  - { at: 0, action: staff_enter, persons: 2 }
+  - { at: 10, action: call, pressed: false }
+  - { at: 18, action: expression, expression: neutral, confidence: 0.85 }
+  - { at: 48, action: staff_leave }

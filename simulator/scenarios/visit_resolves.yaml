@@ -1,0 +1,12 @@
+name: visit_resolves
+description: Visite d'un soignant - evaluation du patient au lit, reassurance, consignes, puis sortie.
+room: "101"
+role: nurse
+resolves: [behavioral_risk]
+duration: 52
+steps:
+  - { at: 0, action: staff_enter, persons: 2 }
+  - { at: 12, action: posture, posture: lying_bed, activity: awake_bed, zone: bed }
+  - { at: 16, action: expression, expression: neutral, confidence: 0.8 }
+  - { at: 20, action: noop, hook: behavior_recover }
+  - { at: 48, action: staff_leave }

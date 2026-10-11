@@ -1,0 +1,10 @@
+name: equipment_resolves
+description: Un infirmier verifie le patient, remplace l'appareil en panne par un appareil de la salle Equipements (etage 1), controle son fonctionnement, puis sort.
+room: "103"
+role: nurse
+resolves: [equipment_fault]
+duration: 54
+steps:
+  - { at: 0, action: staff_enter, persons: 2 }
+  - { at: 18, action: device_clear, hook: equipment_repaired }
+  - { at: 50, action: staff_leave }

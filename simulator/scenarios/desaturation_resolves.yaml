@@ -1,0 +1,14 @@
+name: desaturation_resolves
+description: Un infirmier repositionne le patient en position demi-assise et debute l'oxygenotherapie prescrite ; la SpO2 remonte.
+room: "103"
+role: nurse
+resolves: [hypoxemia]
+duration: 54
+steps:
+  - { at: 0, action: staff_enter, persons: 2 }
+  - { at: 8, action: posture, posture: sitting_bed, activity: awake_bed, zone: bed }
+  - { at: 12, action: device_status, device: oxygen, status: running }
+  - { at: 12, action: clear_trends }
+  - { at: 12, action: trend, metric: spo2, target: 96, duration: 25, hold: 900 }
+  - { at: 12, action: trend, metric: rr, target: 18, duration: 25, hold: 300 }
+  - { at: 50, action: staff_leave }

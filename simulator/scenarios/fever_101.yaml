@@ -1,0 +1,9 @@
+name: fever_101
+description: Chambre 101 - FIEVRE VRAIE. La temperature centrale (thermometre) monte a 39 C, avec tachycardie et polypnee. Parcours fievre - medecin de garde, bilan clinique, bilan biologique, puis confort.
+room: "101"
+duration: 60
+steps:
+  - { at: 0, action: trend, metric: temp, target: 39.1, duration: 30, hold: 1800 }
+  - { at: 5, action: trend, metric: hr, target: 106, duration: 30, hold: 1800 }
+  - { at: 5, action: trend, metric: rr, target: 23, duration: 30, hold: 1800 }
+  - { at: 20, action: expression, expression: sad, confidence: 0.6 }

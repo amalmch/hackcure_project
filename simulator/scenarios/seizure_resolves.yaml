@@ -1,0 +1,12 @@
+name: seizure_resolves
+description: Le medecin de garde et un infirmier securisent le patient, traitent la crise selon le protocole et verifient le traitement antiepileptique.
+room: "103"
+role: duty_doctor
+resolves: [predicted_seizure]
+duration: 60
+steps:
+  - { at: 0, action: staff_enter, persons: 3 }
+  - { at: 12, action: seizure, level: 0 }
+  - { at: 12, action: clear_trends }
+  - { at: 12, action: posture, posture: lying_bed, activity: awake_bed, zone: bed }
+  - { at: 56, action: staff_leave }

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hackcure/safety_alarm.json",
+  "title": "hackcure/room/{room}/safety/alarm",
+  "type": "object",
+  "required": ["ts", "source", "reason", "localActionTaken"],
+  "properties": {
+    "ts": { "type": "string" },
+    "source": { "type": "string" },
+    "reason": { "enum": ["fall", "call", "critical", "bed_exit_night"] },
+    "localActionTaken": { "type": "array", "items": { "type": "string" } },
+    "offline": { "type": "boolean", "description": "true si l'alarme a été mise en file hors réseau" }
+  },
+  "additionalProperties": true
+}

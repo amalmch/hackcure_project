@@ -1,0 +1,406 @@
+{
+  "name": "shift-report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "45 7,19 * * *"
+            }
+          ]
+        }
+      },
+      "id": "ea6d89cc-e791-565e-913c-828eebf07bf4",
+      "name": "Cron 07:45 et 19:45",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "shift-report",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "0ad0b4fb-6a78-57be-830b-53024b043506",
+      "name": "Webhook shift-report",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_WEBHOOK__",
+          "name": "Hospital Copilot — Webhook (X-Hospital-Secret)"
+        }
+      },
+      "webhookId": "b0fc8958-4404-50ab-8e46-98048b926c9b"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configuration : l'événement de la plateforme est prioritaire ; sinon valeurs posées à l'import (n8n/setup_n8n.py).\nconst CFG = { platform_url: '__PLATFORM_URL__', telegram_chat_id: '__TELEGRAM_CHAT_ID__', llm_model: '__LLM_MODEL__' };\nconst DEF = { platform_url: 'http://localhost:8000', telegram_chat_id: '', llm_model: 'claude-sonnet-5-5' };\nconst cfg = (k, v) => v || (String(CFG[k]).startsWith('__') ? DEF[k] : CFG[k]);\n// n8n (Node) résout « localhost » en IPv6 (::1) alors que la plateforme écoute en IPv4 : on force 127.0.0.1.\nconst platformUrl = (v) => cfg('platform_url', v).replace(/\\/$/, '').replace('//localhost', '//127.0.0.1');\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst body = $input.first().json.body || {};   // vide quand le déclencheur est le Cron\nconst hours = Math.max(1, Math.min(Number(body.hours) || 12, 48));\nconst end = new Date();\nconst start = new Date(end.getTime() - hours * 3600 * 1000);\nreturn [{ json: {\n  started_at: Date.now(), room: '',\n  trigger: body.event ? `bouton de la plateforme (${body.triggered_by || '?'})` : 'Cron 07:45 / 19:45',\n  hours, since: start.toISOString(), until: end.toISOString(),\n  platform_url: platformUrl(body.platform_url),\n  chat_id: cfg('telegram_chat_id', body.telegram_chat_id),\n  model: cfg('llm_model', body.llm_model),\n} }];\n"
+      },
+      "id": "85180a7e-0a00-5d91-ba40-cd6dcb57c8fc",
+      "name": "Contexte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.platform_url }}/api/events?since={{ encodeURIComponent($json.since) }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "abb82d24-7c2e-5d21-a8c1-d1c76216db99",
+      "name": "Plateforme : événements, risques, humeurs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Contexte').first().json;\nconst d = $input.first().json || {};\nconst rooms = Object.keys(d.rooms || {}).sort();\nconst by = (arr, room) => (arr || []).filter((x) => String(x.room) === room);\nconst data = rooms.map((room) => ({\n  chambre: room,\n  etat_actuel: d.rooms[room],\n  risques: by(d.risks, room).map((r) => ({ titre: r.title, type: r.type, severite: r.severity, statut: r.status, detecte_le: r.detected_at, resolu_le: r.resolved_at, escalade_le: r.escalated_at, cloture_par: r.resolved_by,\n    plan: r.plan ? r.plan.steps.map((s) => ({ etape: s.text, faite: !!s.done, par: s.done_by })) : [] })),\n  evenements: by(d.state_events, room).slice(-40).map((e) => `${e.ts.slice(11, 19)} ${e.posture}/${e.activity}${e.persons > 1 ? ' (personnel présent)' : ''}`),\n  humeurs: by(d.moods, room).slice(-12).map((m) => `${m.ts.slice(11, 16)} ${m.mood}${m.note ? ' — ' + m.note : ''}`),\n  visites_du_personnel: by(d.visits, room).length,\n}));\nconst system = [\n  \"Tu rédiges le rapport de garde (relève infirmière) d'une clinique à partir de données mesurées. Aide à la décision : le rapport sera relu et validé par l'infirmier(ère) responsable.\",\n  \"Règles : n'invente rien ; cite les valeurs et les heures fournies ; si une information manque, écris « non renseigné ».\",\n  \"Réponds en français, UNIQUEMENT par un objet JSON valide, sans texte autour et sans balise Markdown.\",\n].join('\\n');\nconst user = `Période : du ${ctx.since} au ${ctx.until} (UTC).\\nDonnées par chambre (JSON) :\\n${JSON.stringify(data, null, 1)}\\n\\nFormat exact :\\n{\"summary\": \"synthèse de la garde en 2-3 phrases\", \"rooms\": [{\"room\": \"101\", \"patient_state\": \"état actuel + constantes citées\", \"events\": [\"...\"], \"risks\": [\"titre [sévérité, statut]\"], \"actions\": [\"actions réalisées\"], \"mood\": \"humeur observée\"}], \"handover\": [\"points d'attention pour la relève\"]}`;\nreturn [{ json: { data, counts: { risks: (d.risks || []).length, events: (d.state_events || []).length, moods: (d.moods || []).length },\n  request: { model: ctx.model, max_tokens: 12000, system, messages: [{ role: 'user', content: user }] } } }];\n"
+      },
+      "id": "ab30e2ee-66be-576d-acc6-fd46db6e2711",
+      "name": "Construire le prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "da215818-8a61-531b-b00a-f1adcf6d57a8",
+      "name": "Claude : rapport de garde",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_ANTHROPIC__",
+          "name": "Hospital Copilot — Anthropic (x-api-key)"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrait l'objet JSON de la réponse Anthropic (content[].text) ; lève une erreur si absent ou invalide.\nfunction parseClaude(res) {\n  if (!res || res.error) throw new Error(typeof (res || {}).error === 'string' ? res.error : ((res || {}).error || {}).message || 'appel Anthropic en échec');\n  const text = (res.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');\n  if (!text) throw new Error('réponse vide');\n  const m = text.match(/\\{[\\s\\S]*\\}/);\n  return JSON.parse(m ? m[0] : text);\n}\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst ctx = $('Contexte').first().json;\nconst prep = $('Construire le prompt').first().json;\nconst res = $input.first().json;\nconst fmt = (iso) => String(iso).slice(0, 16).replace('T', ' ') + ' UTC';\nconst list = (a) => (Array.isArray(a) && a.length ? a.map(String).join(' ; ') : 'aucun');\nlet out = null, error = null;\ntry {\n  out = parseClaude(res);\n  if (!Array.isArray(out.rooms) || !out.rooms.length) throw new Error('rapport sans chambre');\n} catch (e) { error = e.message; out = null; }\nconst fallback = out === null;\nconst lines = [`# Rapport de garde — ${fmt(ctx.since)} → ${fmt(ctx.until)}`, ''];\nif (fallback) {\n  lines.push('_Réponse de secours (LLM indisponible) — synthèse automatique des données, à compléter par l\\'infirmier(ère) responsable._', '');\n  for (const r of prep.data) {\n    const e = r.etat_actuel || {};\n    lines.push(`## Chambre ${r.chambre}`, `- **État actuel** : posture ${e.posture}, activité ${e.activity}, expression ${e.expression}.`,\n      `- **Risques** (${r.risques.length}) : ${list(r.risques.map((x) => `${x.titre} [${x.severite}, ${x.statut}]`))}.`, `- **Humeur observée** : ${r.humeurs.slice(-1)[0] || 'non évaluée'}.`, '');\n  }\n} else {\n  lines.push(`_Rédigé par n8n (workflow shift-report, ${(res && res.model) || ctx.model}) — aide à la décision, à valider par l'infirmier(ère) responsable._`, '', String(out.summary || '').trim(), '');\n  for (const r of out.rooms) {\n    lines.push(`## Chambre ${r.room}`, `- **État actuel** : ${r.patient_state || 'non renseigné'}`, `- **Événements** : ${list(r.events)}`, `- **Risques** : ${list(r.risks)}`,\n      `- **Actions réalisées** : ${list(r.actions)}`, `- **Humeur observée** : ${r.mood || 'non évaluée'}`, '');\n  }\n  lines.push('## Points d\\'attention pour la relève', ...((out.handover || []).length ? out.handover.map((h) => `- ${h}`) : ['- Aucun point particulier.']));\n}\nreturn [{ json: {\n  started_at: ctx.started_at, room: '', platform_url: ctx.platform_url, chat_id: ctx.chat_id, fallback, error, counts: prep.counts,\n  model_used: (res && res.model) || ctx.model, anthropic_id: (res && res.id) || null,\n  report: { content: lines.join('\\n'), hours: ctx.hours, shift_start: ctx.since, shift_end: ctx.until, source: 'n8n:shift-report', fallback },\n} }];\n"
+      },
+      "id": "7e0dcdea-447d-5783-b8c2-b2d2401e1b8b",
+      "name": "Valider et mettre en forme",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.platform_url }}/api/shift-reports",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.report) }}"
+      },
+      "id": "b0d5b4c3-1a45-5618-8e78-1abde34e2d20",
+      "name": "Plateforme : enregistrer le rapport",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500
+    },
+    {
+      "parameters": {
+        "jsCode": "const v = $('Valider et mettre en forme').first().json;\nconst rep = $input.first().json;\nconst link = `${v.platform_url}${rep.print_url || '/print/shift/' + rep.id}`;\nreturn [{ json: { ...v, report: undefined, report_id: rep.id, link,\n  telegram_text: `📝 <b>Rapport de garde #${rep.id}</b> prêt (brouillon${v.fallback ? ' — réponse de secours' : ''}).\\n${v.counts.risks} risque(s), ${v.counts.moods} observation(s) d'humeur sur la période.\\nÀ valider puis imprimer : ${link}` } }];\n"
+      },
+      "id": "c326a15b-622d-5812-bc59-f951497e2312",
+      "name": "Préparer le message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Préparer le message').first().json.chat_id }}",
+        "text": "={{ $('Préparer le message').first().json.telegram_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "4be4ecbe-aa73-5a61-a40f-26f77e8deb67",
+      "name": "Telegram : lien d'impression",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1920,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "__CRED_TELEGRAM__",
+          "name": "Hospital Copilot — Telegram"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "webhookId": "bceae6dc-3e0d-5114-a350-a86435c41f32"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Préparer le message').first().json.platform_url }}/api/agents/log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "agent",
+              "value": "shift-report"
+            },
+            {
+              "name": "room",
+              "value": "={{ $('Préparer le message').first().json.room || '' }}"
+            },
+            {
+              "name": "input",
+              "value": "=déclencheur : {{ $('Contexte').first().json.trigger }} — {{ $('Préparer le message').first().json.counts.risks }} risque(s), {{ $('Préparer le message').first().json.counts.events }} événement(s), {{ $('Préparer le message').first().json.counts.moods }} humeur(s)"
+            },
+            {
+              "name": "reasoning",
+              "value": "={{ $('Préparer le message').first().json.fallback ? 'RÉPONSE DE SECOURS (LLM indisponible) : ' + $('Préparer le message').first().json.error : 'Rapport structuré par chambre rédigé par ' + $('Préparer le message').first().json.model_used + ' (réponse ' + $('Préparer le message').first().json.anthropic_id + '), JSON validé.' }}"
+            },
+            {
+              "name": "output",
+              "value": "=rapport de garde #{{ $('Préparer le message').first().json.report_id }} déposé (brouillon), lien d'impression envoyé sur Telegram"
+            },
+            {
+              "name": "status",
+              "value": "={{ $('Préparer le message').first().json.fallback ? 'error' : 'ok' }}"
+            },
+            {
+              "name": "duration_ms",
+              "value": "={{ Date.now() - ($('Préparer le message').first().json.started_at || Date.now()) }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "2b318276-eb79-5146-a739-a561a3737a12",
+      "name": "Journal : rapport déposé",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2160,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__CRED_PLATFORM__",
+          "name": "Hospital Copilot — Plateforme (jeton de service)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Cron 07:45 et 19:45": {
+      "main": [
+        [
+          {
+            "node": "Contexte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook shift-report": {
+      "main": [
+        [
+          {
+            "node": "Contexte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexte": {
+      "main": [
+        [
+          {
+            "node": "Plateforme : événements, risques, humeurs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plateforme : événements, risques, humeurs": {
+      "main": [
+        [
+          {
+            "node": "Construire le prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire le prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude : rapport de garde",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude : rapport de garde": {
+      "main": [
+        [
+          {
+            "node": "Valider et mettre en forme",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valider et mettre en forme": {
+      "main": [
+        [
+          {
+            "node": "Plateforme : enregistrer le rapport",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plateforme : enregistrer le rapport": {
+      "main": [
+        [
+          {
+            "node": "Préparer le message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer le message": {
+      "main": [
+        [
+          {
+            "node": "Telegram : lien d'impression",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram : lien d'impression": {
+      "main": [
+        [
+          {
+            "node": "Journal : rapport déposé",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

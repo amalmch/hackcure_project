@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hackcure/device.json",
+  "title": "hackcure/room/{room}/device/{deviceId} (1 Hz)",
+  "type": "object",
+  "required": ["ts", "source", "type", "metrics"],
+  "properties": {
+    "ts": { "type": "string" },
+    "source": { "type": "string" },
+    "type": { "enum": ["iv_pump", "nutrition_pump", "transfusion", "bp", "ecg", "oxygen", "spo2", "thermometer", "glucometer"] },
+    "status": { "enum": ["running", "paused", "alarm", "off", "standby"] },
+    "metrics": { "type": "object" },
+    "fault": {
+      "description": "Panne de l'appareil (absent ou null = en service). L'occlusion et la poche vide d'une pompe passent par metrics, pas par fault.",
+      "type": ["object", "null"],
+      "required": ["code"],
+      "properties": { "code": { "type": "string" }, "label": { "type": "string" } }
+    }
+  },
+  "allOf": [
+    { "if": { "properties": { "type": { "const": "iv_pump" } } },
+      "then": { "properties": { "metrics": { "required": ["rateMlH", "volumeLeftMl", "occlusion"],
+        "properties": { "rateMlH": { "type": "number", "minimum": 0 }, "volumeLeftMl": { "type": "number", "minimum": 0 }, "occlusion": { "type": "boolean" } } } } } },
+    { "if": { "properties": { "type": { "const": "nutrition_pump" } } },
+      "then": { "properties": { "metrics": { "required": ["rateMlH", "volumeLeftMl"] } } } },
+    { "if": { "properties": { "type": { "const": "transfusion" } } },
+      "then": { "properties": { "metrics": { "required": ["rateMlH", "volumeLeftMl", "reaction"],
+        "properties": { "reaction": { "type": "boolean" } } } } } },
+    { "if": { "properties": { "type": { "const": "bp" } } },
+      "then": { "properties": { "metrics": { "required": ["sys", "dia", "map"],
+        "properties": { "sys": { "type": "number", "minimum": 30, "maximum": 300 }, "dia": { "type": "number", "minimum": 10, "maximum": 200 }, "map": { "type": "number" } } } } } },
+    { "if": { "properties": { "type": { "const": "ecg" } } },
+      "then": { "properties": { "metrics": { "required": ["hr", "rhythm"],
+        "properties": { "hr": { "type": "number", "minimum": 0, "maximum": 300 }, "rhythm": { "type": "string" } } } } } },
+    { "if": { "properties": { "type": { "const": "oxygen" } } },
+      "then": { "properties": { "metrics": { "required": ["flowLMin"], "properties": { "flowLMin": { "type": "number", "minimum": 0, "maximum": 60 } } } } } },
+    { "if": { "properties": { "type": { "const": "spo2" } } },
+      "then": { "properties": { "metrics": { "required": ["spo2"], "properties": { "spo2": { "type": "number", "minimum": 0, "maximum": 100 } } } } } },
+    { "if": { "properties": { "type": { "const": "thermometer" } } },
+      "then": { "properties": { "metrics": { "required": ["tempC"], "properties": { "tempC": { "type": "number", "minimum": 30, "maximum": 45 } } } } } }
+  ],
+  "additionalProperties": true
+}

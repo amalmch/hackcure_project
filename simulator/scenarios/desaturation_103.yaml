@@ -1,0 +1,11 @@
+name: desaturation_103
+description: Chambre 103 (patient BPCO, cible SpO2 88-92 %) - desaturation rapide sous oxygene, polypnee et tachycardie.
+room: "103"
+duration: 90
+steps:
+  - { at: 0, action: posture, posture: lying_bed, activity: awake_bed, zone: bed }
+  - { at: 5, action: device_status, device: oxygen, status: standby }
+  - { at: 5, action: trend, metric: spo2, target: 81, duration: 35, hold: 900 }
+  - { at: 10, action: trend, metric: rr, target: 29, duration: 30, hold: 900 }
+  - { at: 10, action: trend, metric: hr, target: 114, duration: 30, hold: 900 }
+  - { at: 25, action: expression, expression: fear, confidence: 0.7 }
